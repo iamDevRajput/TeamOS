@@ -39,14 +39,34 @@ model User {
   githubUserId BigInt       @unique @map("github_user_id")
   login        String       @unique
   displayName  String?      @map("display_name")
+  avatarUrl    String?      @map("avatar_url")
   createdAt    DateTime     @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt    DateTime     @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
 
   memberships       Membership[]
+  sessions          Session[]
   createdProjects   Project[]        @relation("ProjectCreator")
   createdTasks      Task[]           @relation("TaskCreator")
   createdDeps       TaskDependency[] @relation("DependencyCreator")
 
   @@map("users")
+}
+
+model Session {
+  id               String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId           String   @map("user_id") @db.Uuid
+  sessionTokenHash String   @unique @map("session_token_hash")
+  expiresAt        DateTime @map("expires_at") @db.Timestamptz(6)
+  createdAt        DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  lastActiveAt     DateTime @default(now()) @map("last_active_at") @db.Timestamptz(6)
+  userAgent        String?  @map("user_agent") @db.VarChar(255)
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([sessionTokenHash])
+  @@index([userId])
+  @@index([expiresAt])
+  @@map("sessions")
 }
 
 model Organization {

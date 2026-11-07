@@ -36,3 +36,21 @@ export interface TaskDto {
   updatedAt: string;
 }
 
+export interface AuthUserDto {
+  id: string;
+  login: string;
+  displayName: string | null;
+  avatarUrl: string | null;
+}
+
+export interface AuthMeResponseDto {
+  user: AuthUserDto;
+  sessionId: string;
+  expiresAt: string;
+  lastActiveAt: string;
+}
+
+export interface LogoutResponseDto {
+  success: boolean;
+}
+

@@ -18,11 +18,23 @@ export {
 } from "./outbox";
 export type { OutboxClaimedEvent } from "./outbox";
 
+export {
+  createIdentityPrismaClient,
+  createSession,
+  resolveSessionByHash,
+  touchSession,
+  revokeSession,
+  cleanupExpiredSessions,
+  upsertUserFromOAuth,
+} from "./session";
+export type { SessionUser } from "./session";
+
 // Re-export safe types and enums from Prisma Client
 export { TaskStatus, ActorType, OutboxStatus, Prisma } from "@prisma/client";
 
 export type {
   User,
+  Session,
   Organization,
   Membership,
   Project,
