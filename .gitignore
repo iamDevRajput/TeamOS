@@ -1,0 +1,17 @@
+.DS_Store
+
+.env
+.env.*
+!.env.example
+
+node_modules/
+.pnpm-store/
+.next/
+dist/
+build/
+coverage/
+*.log
+
+TEAM_OS_STARTER_BUNDLE_v1 (1)/
+
+*.tsbuildinfo

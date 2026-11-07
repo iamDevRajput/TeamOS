@@ -1,0 +1,10 @@
+{
+  "extends": "@teamos/config/tsconfig.node.json",
+  "compilerOptions": {
+    "outDir": "./dist",
+    "rootDir": "./src",
+    "baseUrl": "./"
+  },
+  "include": ["src/**/*", "test/**/*"]
+}
+

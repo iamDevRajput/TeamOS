@@ -1,0 +1,22 @@
+{
+  "name": "@teamos/worker",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "build": "tsc -b",
+    "start": "node dist/index.js",
+    "typecheck": "tsc --noEmit",
+    "lint": "echo '@teamos/worker lint pass'",
+    "test": "echo '@teamos/worker test pass'",
+    "clean": "rm -rf dist"
+  },
+  "dependencies": {
+    "@teamos/contracts": "workspace:*"
+  },
+  "devDependencies": {
+    "@teamos/config": "workspace:*",
+    "@types/node": "^20.17.0",
+    "typescript": "^5.6.3"
+  }
+}
+

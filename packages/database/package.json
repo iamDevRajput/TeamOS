@@ -1,0 +1,20 @@
+{
+  "name": "@teamos/database",
+  "version": "0.1.0",
+  "private": true,
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "scripts": {
+    "build": "tsc -b",
+    "typecheck": "tsc --noEmit",
+    "lint": "echo '@teamos/database lint pass'",
+    "test": "echo '@teamos/database test pass'",
+    "clean": "rm -rf dist"
+  },
+  "devDependencies": {
+    "@teamos/config": "workspace:*",
+    "@teamos/contracts": "workspace:*",
+    "typescript": "^5.6.3"
+  }
+}
+

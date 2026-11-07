@@ -1,0 +1,21 @@
+{
+  "name": "teamos",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Delivery Risk Intelligence for software teams",
+  "packageManager": "pnpm@12.18.0",
+  "scripts": {
+    "build": "pnpm -r --filter=!teamos build",
+    "lint": "pnpm -r --filter=!teamos lint",
+    "typecheck": "pnpm -r --filter=!teamos typecheck",
+    "test": "pnpm -r --filter=!teamos test",
+    "clean": "pnpm -r exec rm -rf dist .next node_modules"
+  },
+  "devDependencies": {
+    "typescript": "^5.6.3",
+    "prettier": "^3.3.3"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  }
+}
