@@ -1,9 +1,37 @@
 /**
- * TeamOS Database Package Placeholder.
+ * TeamOS Centralized Database Package
  *
- * All tenant access in later milestones will be strictly routed through `withTenant(context, fn)`.
- * Raw Prisma client exports are disallowed outside this package.
+ * Rules:
+ * - All tenant database access must pass through `withTenant(context, tx)`.
+ * - Raw Prisma client instances are not exported outside this package.
  */
 
-export const DATABASE_PACKAGE_VERSION = '0.1.0';
+export { withTenant } from './with-tenant';
+export type { TenantContext, TransactionOptions, OrgRole } from './with-tenant';
 
+export {
+  createWorkerPrismaClient,
+  claimNextOutboxEvent,
+  completeOutboxEvent,
+  failOutboxEvent,
+} from './outbox';
+export type { OutboxClaimedEvent } from './outbox';
+
+// Re-export safe types and enums from Prisma Client
+export {
+  TaskStatus,
+  ActorType,
+  OutboxStatus,
+  Prisma,
+} from '@prisma/client';
+
+export type {
+  User,
+  Organization,
+  Membership,
+  Project,
+  Task,
+  TaskDependency,
+  AuditEvent,
+  OutboxEvent,
+} from '@prisma/client';

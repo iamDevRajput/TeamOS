@@ -1,0 +1,201 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL_MIGRATION")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+enum OrgRole {
+  OWNER
+  ADMIN
+  MEMBER
+}
+
+enum TaskStatus {
+  TODO
+  IN_PROGRESS
+  DONE
+  CANCELLED
+}
+
+enum ActorType {
+  USER
+  SYSTEM
+  GITHUB
+  AI
+}
+
+enum OutboxStatus {
+  PENDING
+  PROCESSING
+  COMPLETED
+  DEAD
+}
+
+model User {
+  id           String       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  githubUserId BigInt       @unique @map("github_user_id")
+  login        String       @unique
+  displayName  String?      @map("display_name")
+  createdAt    DateTime     @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  memberships       Membership[]
+  createdProjects   Project[]        @relation("ProjectCreator")
+  createdTasks      Task[]           @relation("TaskCreator")
+  createdDeps       TaskDependency[] @relation("DependencyCreator")
+
+  @@map("users")
+}
+
+model Organization {
+  id                   String       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name                 String
+  slug                 String       @unique
+  aiBudgetCentsMonthly Int          @default(0) @map("ai_budget_cents_monthly")
+  createdAt            DateTime     @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  memberships  Membership[]
+  projects     Project[]
+  tasks        Task[]
+  dependencies TaskDependency[]
+  auditEvents  AuditEvent[]
+  outboxEvents OutboxEvent[]
+
+  @@map("organizations")
+}
+
+model Membership {
+  orgId     String   @map("org_id") @db.Uuid
+  userId    String   @map("user_id") @db.Uuid
+  role      OrgRole  @default(MEMBER)
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  organization Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  assignedTasks Task[]
+
+  @@id([orgId, userId])
+  @@map("memberships")
+}
+
+model Project {
+  id              String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  orgId           String   @map("org_id") @db.Uuid
+  key             String
+  name            String
+  startDate       DateTime? @map("start_date") @db.Date
+  dueDate         DateTime? @map("due_date") @db.Date
+  timezone        String   @default("UTC")
+  nextTaskNumber  Int      @default(1) @map("next_task_number")
+  createdBy       String   @map("created_by") @db.Uuid
+  createdAt       DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  organization Organization     @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  creator      User             @relation("ProjectCreator", fields: [createdBy], references: [id], onDelete: Restrict)
+  tasks        Task[]
+  dependencies TaskDependency[]
+
+  @@unique([orgId, id])
+  @@unique([orgId, key])
+  @@index([orgId])
+  @@map("projects")
+}
+
+model Task {
+  id                        String     @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  orgId                     String     @map("org_id") @db.Uuid
+  projectId                 String     @map("project_id") @db.Uuid
+  number                    Int
+  title                     String
+  description               String?
+  status                    TaskStatus @default(TODO)
+  assigneeId                String?    @map("assignee_id") @db.Uuid
+  remainingEstimateWorkdays Int?       @map("remaining_estimate_workdays")
+  dueDate                   DateTime?  @map("due_date") @db.Date
+  version                   Int        @default(1)
+  createdBy                 String     @map("created_by") @db.Uuid
+  createdAt                 DateTime   @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt                 DateTime   @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  organization Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  project      Project      @relation(fields: [orgId, projectId], references: [orgId, id], onDelete: Cascade)
+  assignee     Membership?  @relation(fields: [orgId, assigneeId], references: [orgId, userId], onDelete: NoAction)
+  creator      User         @relation("TaskCreator", fields: [createdBy], references: [id], onDelete: Restrict)
+
+  blockedBy TaskDependency[] @relation("BlockedTask")
+  blocks    TaskDependency[] @relation("BlockerTask")
+
+  @@unique([orgId, id])
+  @@unique([orgId, projectId, number])
+  @@index([orgId, projectId])
+  @@index([orgId, assigneeId])
+  @@map("tasks")
+}
+
+model TaskDependency {
+  orgId         String   @map("org_id") @db.Uuid
+  projectId     String   @map("project_id") @db.Uuid
+  blockerTaskId String   @map("blocker_task_id") @db.Uuid
+  blockedTaskId String   @map("blocked_task_id") @db.Uuid
+  createdBy     String   @map("created_by") @db.Uuid
+  createdAt     DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  organization Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  project      Project      @relation(fields: [orgId, projectId], references: [orgId, id], onDelete: Cascade)
+  blockerTask  Task         @relation("BlockerTask", fields: [orgId, blockerTaskId], references: [orgId, id], onDelete: Cascade)
+  blockedTask  Task         @relation("BlockedTask", fields: [orgId, blockedTaskId], references: [orgId, id], onDelete: Cascade)
+  creator      User         @relation("DependencyCreator", fields: [createdBy], references: [id], onDelete: Restrict)
+
+  @@id([orgId, blockerTaskId, blockedTaskId])
+  @@index([orgId, blockerTaskId])
+  @@index([orgId, blockedTaskId])
+  @@index([orgId, projectId])
+  @@map("task_dependencies")
+}
+
+model AuditEvent {
+  id         String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  orgId      String    @map("org_id") @db.Uuid
+  actorType  ActorType @map("actor_type")
+  actorId    String    @map("actor_id") @db.Uuid
+  action     String
+  entityType String    @map("entity_type")
+  entityId   String    @map("entity_id") @db.Uuid
+  beforeData Json?     @map("before_data")
+  afterData  Json?     @map("after_data")
+  requestId  String?   @map("request_id")
+  createdAt  DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  organization Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+
+  @@index([orgId, entityType, entityId])
+  @@index([orgId, createdAt])
+  @@map("audit_events")
+}
+
+model OutboxEvent {
+  id          String       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  orgId       String       @map("org_id") @db.Uuid
+  type        String
+  payload     Json
+  dedupeKey   String       @map("dedupe_key")
+  status      OutboxStatus @default(PENDING)
+  attempts    Int          @default(0)
+  maxAttempts Int          @default(5) @map("max_attempts")
+  availableAt DateTime     @default(now()) @map("available_at") @db.Timestamptz(6)
+  lockedUntil DateTime?    @map("locked_until") @db.Timestamptz(6)
+  lockedBy    String?      @map("locked_by")
+  lastError   String?      @map("last_error")
+  createdAt   DateTime     @default(now()) @map("created_at") @db.Timestamptz(6)
+  processedAt DateTime?    @map("processed_at") @db.Timestamptz(6)
+
+  organization Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+
+  @@unique([orgId, dedupeKey])
+  @@index([status, availableAt])
+  @@index([status, lockedUntil])
+  @@map("outbox_events")
+}
+

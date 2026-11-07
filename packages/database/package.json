@@ -8,13 +8,22 @@
     "build": "tsc -b",
     "typecheck": "tsc --noEmit",
     "lint": "echo '@teamos/database lint pass'",
-    "test": "echo '@teamos/database test pass'",
+    "prisma:generate": "prisma generate",
+    "prisma:migrate": "prisma migrate deploy",
+    "test": "vitest run",
     "clean": "rm -rf dist"
+  },
+  "dependencies": {
+    "@prisma/client": "^5.22.0",
+    "@teamos/contracts": "workspace:*"
   },
   "devDependencies": {
     "@teamos/config": "workspace:*",
-    "@teamos/contracts": "workspace:*",
-    "typescript": "^5.6.3"
+    "@types/node": "^20.17.0",
+    "@types/pg": "^8.11.10",
+    "pg": "^8.13.1",
+    "prisma": "^5.22.0",
+    "typescript": "^5.6.3",
+    "vitest": "^2.1.4"
   }
 }
-
