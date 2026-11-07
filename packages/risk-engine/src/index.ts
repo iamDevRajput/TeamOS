@@ -1,74 +1,34 @@
 /**
- * Pure deterministic risk calculation engine for TeamOS.
+ * TeamOS Risk Engine — Public Interface
  *
- * NOTE: Strictly no database, network, or framework imports.
- * Graph calculations adhere to Kahn's algorithm and Critical Path Method (CPM).
+ * Rules:
+ * - Pure deterministic risk calculation engine.
+ * - Zero database, network, or framework imports.
+ * - Graph calculations adhere to Kahn's algorithm and Critical Path Method (CPM).
  */
 
-export interface RiskEngineTask {
-  id: string;
-  remainingEstimateWorkdays?: number;
-  dueDate?: string;
-  status: 'TODO' | 'IN_PROGRESS' | 'DONE' | 'CANCELLED';
-}
+import { RiskEngineDependency } from "./types";
+import { validateAndSortGraph } from "./dag";
 
-export interface RiskEngineDependency {
-  blockerTaskId: string;
-  blockedTaskId: string;
-}
-
-export interface RiskForecastResult {
-  hasCycle: boolean;
-  criticalPathTaskIds: string[];
-  evaluationDate: string;
-}
+export * from "./types";
+export * from "./calendar";
+export * from "./dag";
+export * from "./cpm";
+export * from "./impact";
+export * from "./what-if";
+export * from "./engine";
 
 /**
  * Validates that the finish-to-start dependency graph is a Directed Acyclic Graph (DAG).
+ * Preserves backwards compatibility for existing consumers and tests.
  */
 export function validateAcyclicGraph(
   taskIds: string[],
   dependencies: RiskEngineDependency[],
 ): { isAcyclic: boolean; cycleNodes?: string[] } {
-  const adj = new Map<string, string[]>();
-  const inDegree = new Map<string, number>();
-
-  for (const id of taskIds) {
-    adj.set(id, []);
-    inDegree.set(id, 0);
-  }
-
-  for (const dep of dependencies) {
-    if (!adj.has(dep.blockerTaskId) || !adj.has(dep.blockedTaskId)) {
-      continue;
-    }
-    adj.get(dep.blockerTaskId)!.push(dep.blockedTaskId);
-    inDegree.set(dep.blockedTaskId, (inDegree.get(dep.blockedTaskId) || 0) + 1);
-  }
-
-  const queue: string[] = [];
-  for (const [id, deg] of inDegree.entries()) {
-    if (deg === 0) {
-      queue.push(id);
-    }
-  }
-
-  let visitedCount = 0;
-  while (queue.length > 0) {
-    const node = queue.shift()!;
-    visitedCount++;
-    const neighbors = adj.get(node) || [];
-    for (const neighbor of neighbors) {
-      const newDeg = (inDegree.get(neighbor) || 0) - 1;
-      inDegree.set(neighbor, newDeg);
-      if (newDeg === 0) {
-        queue.push(neighbor);
-      }
-    }
-  }
-
+  const result = validateAndSortGraph(taskIds, dependencies);
   return {
-    isAcyclic: visitedCount === taskIds.length,
+    isAcyclic: result.isAcyclic,
+    cycleNodes: result.cycleNodes,
   };
 }
-
