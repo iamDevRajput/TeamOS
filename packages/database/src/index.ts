@@ -7,7 +7,7 @@
  */
 
 export { withTenant } from "./with-tenant";
-export type { TenantContext, TransactionOptions, OrgRole } from "./with-tenant";
+export type { TenantContext, TransactionOptions } from "./with-tenant";
 
 export {
   createWorkerPrismaClient,
@@ -29,14 +29,33 @@ export {
 } from "./session";
 export type { SessionUser } from "./session";
 
+export {
+  createApiPrismaClient,
+  createOrganization,
+  listUserOrganizations,
+  getOrganizationMembership,
+  getOrganizationById,
+  listOrganizationMembers,
+  updateMemberRole,
+  removeMember,
+  transferOwnership,
+  createInvitation,
+  listPendingInvitations,
+  revokeInvitation,
+  getInvitationByTokenHash,
+  acceptInvitationByTokenHash,
+} from "./tenancy";
+export type { CreateOrgResult } from "./tenancy";
+
 // Re-export safe types and enums from Prisma Client
-export { TaskStatus, ActorType, OutboxStatus, Prisma } from "@prisma/client";
+export { TaskStatus, ActorType, OutboxStatus, OrgRole, Prisma } from "@prisma/client";
 
 export type {
   User,
   Session,
   Organization,
   Membership,
+  Invitation,
   Project,
   Task,
   TaskDependency,
