@@ -15,7 +15,6 @@ export {
   completeOutboxEvent,
   failOutboxEvent,
   sanitizeErrorMessage,
-  sanitizeErrorMessage,
 } from "./outbox";
 export type { OutboxClaimedEvent } from "./outbox";
 
