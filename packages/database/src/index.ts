@@ -6,24 +6,21 @@
  * - Raw Prisma client instances are not exported outside this package.
  */
 
-export { withTenant } from './with-tenant';
-export type { TenantContext, TransactionOptions, OrgRole } from './with-tenant';
+export { withTenant } from "./with-tenant";
+export type { TenantContext, TransactionOptions, OrgRole } from "./with-tenant";
 
 export {
   createWorkerPrismaClient,
   claimNextOutboxEvent,
   completeOutboxEvent,
   failOutboxEvent,
-} from './outbox';
-export type { OutboxClaimedEvent } from './outbox';
+  sanitizeErrorMessage,
+  sanitizeErrorMessage,
+} from "./outbox";
+export type { OutboxClaimedEvent } from "./outbox";
 
 // Re-export safe types and enums from Prisma Client
-export {
-  TaskStatus,
-  ActorType,
-  OutboxStatus,
-  Prisma,
-} from '@prisma/client';
+export { TaskStatus, ActorType, OutboxStatus, Prisma } from "@prisma/client";
 
 export type {
   User,
@@ -34,4 +31,4 @@ export type {
   TaskDependency,
   AuditEvent,
   OutboxEvent,
-} from '@prisma/client';
+} from "@prisma/client";

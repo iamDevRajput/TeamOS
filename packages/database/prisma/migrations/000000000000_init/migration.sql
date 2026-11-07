@@ -123,6 +123,7 @@ CREATE TABLE public.outbox_events (
   available_at timestamptz(6) NOT NULL DEFAULT clock_timestamp(),
   locked_until timestamptz(6),
   locked_by text,
+  lease_token uuid,
   last_error text,
   created_at timestamptz(6) NOT NULL DEFAULT clock_timestamp(),
   processed_at timestamptz(6),
@@ -150,7 +151,10 @@ ALTER TABLE public.audit_events ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.audit_events FORCE ROW LEVEL SECURITY;
 
 ALTER TABLE public.outbox_events ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.outbox_events FORCE ROW LEVEL SECURITY;
+-- Note: NO FORCE ROW LEVEL SECURITY on outbox_events allows table owner (teamos_outbox_admin)
+-- to claim platform events inside SECURITY DEFINER functions without tenant context, while
+-- non-owner runtime roles (teamos_api_role, teamos_worker_role) are strictly constrained by RLS.
+ALTER TABLE public.outbox_events NO FORCE ROW LEVEL SECURITY;
 
 ALTER TABLE public.users ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.users FORCE ROW LEVEL SECURITY;
@@ -216,7 +220,8 @@ RETURNS TABLE (
   org_id uuid,
   type text,
   payload jsonb,
-  attempts int
+  attempts int,
+  lease_token uuid
 )
 LANGUAGE plpgsql
 SECURITY DEFINER
@@ -231,14 +236,35 @@ BEGIN
     RAISE EXCEPTION 'lease_seconds must be between 5 and 300';
   END IF;
 
+  -- 1. Crash recovery / Dead-letter sweep:
+  -- Move any expired PROCESSING event that already reached max_attempts to DEAD status
+  WITH dead_candidates AS (
+    SELECT o.id
+    FROM public.outbox_events o
+    WHERE o.status = 'PROCESSING'
+      AND o.locked_until < clock_timestamp()
+      AND o.attempts >= o.max_attempts
+    FOR UPDATE SKIP LOCKED
+  )
+  UPDATE public.outbox_events o
+  SET status = 'DEAD',
+      locked_by = NULL,
+      locked_until = NULL,
+      lease_token = NULL,
+      last_error = coalesce(o.last_error, 'Exhausted maximum retry attempts (lease expired)'),
+      processed_at = clock_timestamp()
+  FROM dead_candidates
+  WHERE o.id = dead_candidates.id;
+
+  -- 2. Claim next available PENDING or reclaimable PROCESSING event below max_attempts
   RETURN QUERY
   WITH candidate AS (
     SELECT o.id
     FROM public.outbox_events o
     WHERE (
-      (o.status = 'PENDING' AND o.available_at <= clock_timestamp())
+      (o.status = 'PENDING' AND o.available_at <= clock_timestamp() AND o.attempts < o.max_attempts)
       OR
-      (o.status = 'PROCESSING' AND o.locked_until < clock_timestamp())
+      (o.status = 'PROCESSING' AND o.locked_until < clock_timestamp() AND o.attempts < o.max_attempts)
     )
     ORDER BY o.available_at ASC
     FOR UPDATE SKIP LOCKED
@@ -248,18 +274,20 @@ BEGIN
   SET status = 'PROCESSING',
       locked_by = p_worker_id,
       locked_until = clock_timestamp() + (p_lease_seconds || ' seconds')::interval,
+      lease_token = gen_random_uuid(),
       attempts = o.attempts + 1,
       last_error = NULL
   FROM candidate
   WHERE o.id = candidate.id
-  RETURNING o.id, o.org_id, o.type, o.payload, o.attempts;
+  RETURNING o.id, o.org_id, o.type, o.payload, o.attempts, o.lease_token;
 END;
 $$;
 ALTER FUNCTION public.claim_next_outbox_event(text, int) OWNER TO teamos_outbox_admin;
 
 CREATE OR REPLACE FUNCTION public.complete_outbox_event(
   p_event_id uuid,
-  p_worker_id text
+  p_worker_id text,
+  p_lease_token uuid
 )
 RETURNS boolean
 LANGUAGE plpgsql
@@ -273,25 +301,33 @@ BEGIN
     RAISE EXCEPTION 'worker_id is required';
   END IF;
 
+  IF p_lease_token IS NULL THEN
+    RAISE EXCEPTION 'lease_token is required';
+  END IF;
+
+  -- Require exact match on worker_id, lease_token, status PROCESSING, and active unexpired lease
   UPDATE public.outbox_events
   SET status = 'COMPLETED',
       locked_until = NULL,
       locked_by = NULL,
+      lease_token = NULL,
       processed_at = clock_timestamp()
   WHERE id = p_event_id
     AND status = 'PROCESSING'
     AND locked_by = p_worker_id
+    AND lease_token = p_lease_token
     AND locked_until >= clock_timestamp();
 
   GET DIAGNOSTICS v_updated = ROW_COUNT;
   RETURN v_updated > 0;
 END;
 $$;
-ALTER FUNCTION public.complete_outbox_event(uuid, text) OWNER TO teamos_outbox_admin;
+ALTER FUNCTION public.complete_outbox_event(uuid, text, uuid) OWNER TO teamos_outbox_admin;
 
 CREATE OR REPLACE FUNCTION public.fail_outbox_event(
   p_event_id uuid,
   p_worker_id text,
+  p_lease_token uuid,
   p_error_message text
 )
 RETURNS text
@@ -300,51 +336,60 @@ SECURITY DEFINER
 SET search_path = pg_catalog, pg_temp
 AS $$
 DECLARE
-  v_attempts int;
-  v_max_attempts int;
-  v_new_status public."OutboxStatus";
-  v_backoff_seconds int;
   v_safe_error text;
+  v_result text;
 BEGIN
   IF p_worker_id IS NULL OR btrim(p_worker_id) = '' THEN
     RAISE EXCEPTION 'worker_id is required';
   END IF;
 
-  v_safe_error := substr(coalesce(p_error_message, 'Unknown error'), 1, 1000);
-
-  SELECT attempts, max_attempts INTO v_attempts, v_max_attempts
-  FROM public.outbox_events
-  WHERE id = p_event_id AND locked_by = p_worker_id;
-
-  IF NOT FOUND THEN
-    RETURN 'NOT_FOUND_OR_LEASE_EXPIRED';
+  IF p_lease_token IS NULL THEN
+    RAISE EXCEPTION 'lease_token is required';
   END IF;
 
-  IF v_attempts >= v_max_attempts THEN
-    v_new_status := 'DEAD';
-    UPDATE public.outbox_events
-    SET status = v_new_status,
-        locked_by = NULL,
-        locked_until = NULL,
-        last_error = v_safe_error,
-        processed_at = clock_timestamp()
-    WHERE id = p_event_id;
-  ELSE
-    v_new_status := 'PENDING';
-    v_backoff_seconds := least(3600, power(2, v_attempts)::int);
-    UPDATE public.outbox_events
-    SET status = v_new_status,
-        locked_by = NULL,
-        locked_until = NULL,
-        available_at = clock_timestamp() + (v_backoff_seconds || ' seconds')::interval,
-        last_error = v_safe_error
-    WHERE id = p_event_id;
+  -- Multi-pass regex error sanitization (strip credentials, secrets, tokens, JWTs)
+  v_safe_error := coalesce(p_error_message, 'Unknown error');
+  v_safe_error := regexp_replace(v_safe_error, '([a-zA-Z]+://[^:]+:)[^@]+(@)', '\1[REDACTED]\2', 'g');
+  v_safe_error := regexp_replace(v_safe_error, 'Bearer\s+[A-Za-z0-9_\-\.~+/]+=*', 'Bearer [REDACTED]', 'gi');
+  v_safe_error := regexp_replace(v_safe_error, 'ey[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]+', '[REDACTED_JWT]', 'g');
+  v_safe_error := regexp_replace(v_safe_error, '(gh[pousr]_[A-Za-z0-9_]{10,}|github_pat_[A-Za-z0-9_]{10,}|sk-[A-Za-z0-9_]{10,})', '[REDACTED_TOKEN]', 'g');
+  v_safe_error := regexp_replace(v_safe_error, '(?i)("(?:[a-z0-9_]*(?:password|secret|token|api_key|apikey|auth)[a-z0-9_]*)"\s*:\s*")[^"]+(")', '\1[REDACTED]\2', 'g');
+  v_safe_error := regexp_replace(v_safe_error, '([a-zA-Z0-9_-]*(password|secret|token|api_key|apikey|auth)[a-zA-Z0-9_-]*)(\s*[:=]\s*)([^\s,;"]+)', '\1\3[REDACTED]', 'gi');
+  v_safe_error := substr(v_safe_error, 1, 1000);
+
+  -- Atomic single-statement update enforcing strict lease, worker, and expiration check
+  UPDATE public.outbox_events
+  SET status = CASE
+        WHEN attempts >= max_attempts THEN 'DEAD'::public."OutboxStatus"
+        ELSE 'PENDING'::public."OutboxStatus"
+      END,
+      locked_by = NULL,
+      locked_until = NULL,
+      lease_token = NULL,
+      available_at = CASE
+        WHEN attempts >= max_attempts THEN available_at
+        ELSE clock_timestamp() + (least(3600, power(2, attempts)::int) || ' seconds')::interval
+      END,
+      processed_at = CASE
+        WHEN attempts >= max_attempts THEN clock_timestamp()
+        ELSE NULL
+      END,
+      last_error = v_safe_error
+  WHERE id = p_event_id
+    AND status = 'PROCESSING'
+    AND locked_by = p_worker_id
+    AND lease_token = p_lease_token
+    AND locked_until >= clock_timestamp()
+  RETURNING status::text INTO v_result;
+
+  IF v_result IS NULL THEN
+    RETURN 'STALE_LEASE_OR_UNAUTHORIZED';
   END IF;
 
-  RETURN v_new_status::text;
+  RETURN v_result;
 END;
 $$;
-ALTER FUNCTION public.fail_outbox_event(uuid, text, text) OWNER TO teamos_outbox_admin;
+ALTER FUNCTION public.fail_outbox_event(uuid, text, uuid, text) OWNER TO teamos_outbox_admin;
 
 -- 14. Grant Role Permissions
 -- API Role: Full CRUD on business tables, Append-only on Audit, Insert-only on Outbox
@@ -359,12 +404,12 @@ GRANT SELECT ON public.users TO teamos_worker_role;
 GRANT INSERT ON public.outbox_events TO teamos_worker_role;
 
 REVOKE ALL ON FUNCTION public.claim_next_outbox_event(text, int) FROM PUBLIC;
-REVOKE ALL ON FUNCTION public.complete_outbox_event(uuid, text) FROM PUBLIC;
-REVOKE ALL ON FUNCTION public.fail_outbox_event(uuid, text, text) FROM PUBLIC;
+REVOKE ALL ON FUNCTION public.complete_outbox_event(uuid, text, uuid) FROM PUBLIC;
+REVOKE ALL ON FUNCTION public.fail_outbox_event(uuid, text, uuid, text) FROM PUBLIC;
 
 GRANT EXECUTE ON FUNCTION public.claim_next_outbox_event(text, int) TO teamos_worker_role;
-GRANT EXECUTE ON FUNCTION public.complete_outbox_event(uuid, text) TO teamos_worker_role;
-GRANT EXECUTE ON FUNCTION public.fail_outbox_event(uuid, text, text) TO teamos_worker_role;
+GRANT EXECUTE ON FUNCTION public.complete_outbox_event(uuid, text, uuid) TO teamos_worker_role;
+GRANT EXECUTE ON FUNCTION public.fail_outbox_event(uuid, text, uuid, text) TO teamos_worker_role;
 
 -- Outbox Admin grant
 GRANT SELECT, INSERT, UPDATE, DELETE ON public.outbox_events TO teamos_outbox_admin;

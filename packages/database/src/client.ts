@@ -1,4 +1,4 @@
-import { PrismaClient } from '@prisma/client';
+import { PrismaClient } from "@prisma/client";
 
 declare global {
   // eslint-disable-next-line no-var
@@ -16,16 +16,12 @@ export const prisma =
       db: {
         url:
           process.env.DATABASE_URL ||
-          'postgresql://teamos_api_role:teamos_api_password@localhost:5432/teamos?schema=public',
+          "postgresql://teamos_api_role:teamos_api_password@localhost:5432/teamos?schema=public",
       },
     },
-    log:
-      process.env.NODE_ENV === 'development'
-        ? ['warn', 'error']
-        : ['error'],
+    log: process.env.NODE_ENV === "development" ? ["warn", "error"] : ["error"],
   });
 
-if (process.env.NODE_ENV !== 'production') {
+if (process.env.NODE_ENV !== "production") {
   global.__teamos_prisma = prisma;
 }
-
