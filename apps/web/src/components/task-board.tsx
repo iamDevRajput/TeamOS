@@ -2,6 +2,8 @@
 
 import React, { useState } from 'react';
 import type { TaskDto, TaskStatus } from '@teamos/contracts';
+import { Badge, Button, EmptyState } from './ui';
+import { SearchIcon, PlusIcon, LockIcon, ClockIcon } from './ui/icons';
 
 interface TaskBoardProps {
   tasks: TaskDto[];
@@ -11,11 +13,11 @@ interface TaskBoardProps {
   onOpenCreateTask: () => void;
 }
 
-const COLUMNS: { id: TaskStatus; label: string; color: string }[] = [
-  { id: 'TODO', label: 'To Do', color: 'bg-slate-100 text-slate-700 border-slate-300' },
-  { id: 'IN_PROGRESS', label: 'In Progress', color: 'bg-blue-50 text-blue-800 border-blue-200' },
-  { id: 'DONE', label: 'Done', color: 'bg-emerald-50 text-emerald-800 border-emerald-200' },
-  { id: 'CANCELLED', label: 'Cancelled', color: 'bg-rose-50 text-rose-800 border-rose-200' },
+const COLUMNS: { id: TaskStatus; label: string; dotColor: string }[] = [
+  { id: 'TODO', label: 'To Do', dotColor: 'bg-slate-400' },
+  { id: 'IN_PROGRESS', label: 'In Progress', dotColor: 'bg-blue-500' },
+  { id: 'DONE', label: 'Done', dotColor: 'bg-emerald-500' },
+  { id: 'CANCELLED', label: 'Cancelled', dotColor: 'bg-rose-400' },
 ];
 
 export function TaskBoard({
@@ -34,23 +36,28 @@ export function TaskBoard({
 
   return (
     <div className="space-y-4">
-      {/* Controls Bar */}
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 bg-white p-3 rounded-xl border border-slate-200 shadow-sm">
-        <div className="flex items-center gap-3 w-full sm:w-auto">
-          <input
-            type="text"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search tasks by title..."
-            className="px-3 py-1.5 text-xs border border-slate-200 rounded-lg w-full sm:w-64 focus:outline-none focus:ring-1 focus:ring-blue-500"
-          />
+      {/* Search, View Toggle & Action Bar */}
+      <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 bg-white p-3 rounded-xl border border-slate-200/90 shadow-xs">
+        <div className="flex items-center gap-2.5 flex-1">
+          <div className="relative w-full sm:w-72">
+            <SearchIcon className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+            <input
+              type="text"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Filter tasks by title..."
+              className="w-full pl-8 pr-3 py-1.5 text-xs bg-slate-50 border border-slate-200 rounded-lg text-slate-800 placeholder:text-slate-400 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-600 transition-colors"
+            />
+          </div>
 
-          <div className="flex rounded-lg border border-slate-200 bg-slate-50 p-0.5 text-xs font-semibold">
+          <div className="flex rounded-lg border border-slate-200 bg-slate-100/70 p-0.5 text-xs font-semibold">
             <button
               type="button"
               onClick={() => setViewMode('board')}
-              className={`px-2.5 py-1 rounded-md transition-colors ${
-                viewMode === 'board' ? 'bg-white shadow-sm text-blue-600' : 'text-slate-500'
+              className={`px-3 py-1 rounded-md text-[11px] font-medium transition-all ${
+                viewMode === 'board'
+                  ? 'bg-white shadow-xs text-blue-600 font-bold'
+                  : 'text-slate-600 hover:text-slate-900'
               }`}
             >
               Board
@@ -58,8 +65,10 @@ export function TaskBoard({
             <button
               type="button"
               onClick={() => setViewMode('table')}
-              className={`px-2.5 py-1 rounded-md transition-colors ${
-                viewMode === 'table' ? 'bg-white shadow-sm text-blue-600' : 'text-slate-500'
+              className={`px-3 py-1 rounded-md text-[11px] font-medium transition-all ${
+                viewMode === 'table'
+                  ? 'bg-white shadow-xs text-blue-600 font-bold'
+                  : 'text-slate-600 hover:text-slate-900'
               }`}
             >
               Table
@@ -67,30 +76,36 @@ export function TaskBoard({
           </div>
         </div>
 
-        <button
+        <Button
           type="button"
+          variant="primary"
+          size="sm"
           onClick={onOpenCreateTask}
-          className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-white bg-blue-600 hover:bg-blue-700 rounded-lg shadow-sm transition-colors whitespace-nowrap"
+          leftIcon={<PlusIcon className="w-3.5 h-3.5" />}
         >
-          <span>+</span> New Task
-        </button>
+          Add Task
+        </Button>
       </div>
 
       {filteredTasks.length === 0 ? (
-        <div className="p-12 text-center bg-white rounded-xl border border-dashed border-slate-200 space-y-3">
-          <div className="text-2xl">📋</div>
-          <h4 className="text-sm font-semibold text-slate-800">No tasks in this project yet</h4>
-          <p className="text-xs text-slate-400">
-            Create tasks to start tracking work, estimates, dependencies, and delivery risk.
-          </p>
-          <button
-            type="button"
-            onClick={onOpenCreateTask}
-            className="px-3.5 py-1.5 text-xs font-semibold text-white bg-blue-600 hover:bg-blue-700 rounded-lg shadow-sm transition-colors"
-          >
-            + Create First Task
-          </button>
-        </div>
+        <EmptyState
+          title="No tasks found"
+          description={
+            search
+              ? `No tasks match the filter "${search}".`
+              : 'Tasks track work, effort estimates, and blocker relationships for delivery risk forecasting.'
+          }
+          action={
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={search ? () => setSearch('') : onOpenCreateTask}
+            >
+              {search ? 'Clear Filter' : '+ Create First Task'}
+            </Button>
+          }
+        />
       ) : viewMode === 'board' ? (
         /* Kanban Board Columns */
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
@@ -100,54 +115,68 @@ export function TaskBoard({
             return (
               <div
                 key={col.id}
-                className="bg-slate-100/70 rounded-xl p-3 border border-slate-200/80 flex flex-col min-h-[450px]"
+                className="bg-slate-50/80 rounded-xl p-3 border border-slate-200/80 flex flex-col min-h-[460px]"
               >
-                <div className="flex items-center justify-between pb-2 mb-2 border-b border-slate-200/60">
+                {/* Column Header */}
+                <div className="flex items-center justify-between pb-2.5 mb-2.5 border-b border-slate-200/70">
                   <div className="flex items-center gap-2">
-                    <span
-                      className={`inline-block px-2 py-0.5 rounded text-[11px] font-bold uppercase border ${col.color}`}
-                    >
+                    <span className={`w-2 h-2 rounded-full ${col.dotColor}`} />
+                    <span className="text-xs font-bold text-slate-800 tracking-tight">
                       {col.label}
                     </span>
-                    <span className="text-xs font-bold text-slate-400">{colTasks.length}</span>
                   </div>
+                  <span className="font-mono text-[11px] font-bold text-slate-400 bg-white px-2 py-0.2 rounded-full border border-slate-200">
+                    {colTasks.length}
+                  </span>
                 </div>
 
-                <div className="space-y-2 flex-1 overflow-y-auto">
-                  {colTasks.map((task) => (
-                    <div
-                      key={task.id}
-                      onClick={() => onSelectTask(task)}
-                      className="bg-white p-3 rounded-lg border border-slate-200 shadow-sm hover:shadow transition-shadow cursor-pointer space-y-2 group"
-                    >
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-1.5">
-                          <span className="font-mono text-[10px] font-bold text-slate-500 bg-slate-100 px-1.5 py-0.5 rounded">
-                            {projectKey}-{task.number}
-                          </span>
-                          {(task as any).isBlocked && (
-                            <span className="text-[9px] font-bold text-amber-800 bg-amber-100 px-1 py-0.5 rounded border border-amber-200">
-                              🔒 Blocked
+                {/* Column Tasks */}
+                <div className="space-y-2.5 flex-1 overflow-y-auto">
+                  {colTasks.map((task) => {
+                    const isBlocked = (task as any).isBlocked;
+
+                    return (
+                      <div
+                        key={task.id}
+                        onClick={() => onSelectTask(task)}
+                        className="bg-white p-3.5 rounded-lg border border-slate-200/90 shadow-xs hover:border-blue-500 hover:shadow-card-hover transition-all cursor-pointer space-y-2 group"
+                      >
+                        <div className="flex items-center justify-between gap-1.5">
+                          <div className="flex items-center gap-1.5">
+                            <span className="font-mono text-[10px] font-bold text-slate-600 bg-slate-100 px-1.5 py-0.5 rounded border border-slate-200/80">
+                              {projectKey}-{task.number}
+                            </span>
+                            {isBlocked && (
+                              <Badge variant="warning" size="xs" dot>
+                                Blocked
+                              </Badge>
+                            )}
+                          </div>
+                          {task.remainingEstimateWorkdays !== undefined && (
+                            <span className="text-[10px] font-medium text-slate-500 font-mono flex items-center gap-1">
+                              <ClockIcon className="w-3 h-3 text-slate-400" />
+                              <span>{task.remainingEstimateWorkdays}d</span>
                             </span>
                           )}
                         </div>
-                        {task.remainingEstimateWorkdays !== undefined && (
-                          <span className="text-[10px] font-semibold text-slate-600 bg-slate-50 px-1.5 py-0.5 rounded border border-slate-200">
-                            {task.remainingEstimateWorkdays}d left
+
+                        <h5 className="text-xs font-semibold text-slate-900 group-hover:text-blue-600 line-clamp-2 leading-relaxed transition-colors">
+                          {task.title}
+                        </h5>
+
+                        <div className="flex items-center justify-between pt-1.5 border-t border-slate-100 text-[10px] text-slate-400">
+                          <span className="truncate max-w-[100px] text-slate-600 font-medium">
+                            {task.assigneeName ? `@${task.assigneeName}` : 'Unassigned'}
                           </span>
-                        )}
+                          {task.dueDate && (
+                            <span className="text-slate-400 font-mono">
+                              Due {task.dueDate}
+                            </span>
+                          )}
+                        </div>
                       </div>
-
-                      <h5 className="text-xs font-semibold text-slate-900 line-clamp-2">
-                        {task.title}
-                      </h5>
-
-                      <div className="flex items-center justify-between pt-1 border-t border-slate-100 text-[10px] text-slate-400">
-                        <span>{task.assigneeName ? `@${task.assigneeName}` : 'Unassigned'}</span>
-                        {task.dueDate && <span>Due: {task.dueDate}</span>}
-                      </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               </div>
             );
@@ -155,70 +184,75 @@ export function TaskBoard({
         </div>
       ) : (
         /* Table View */
-        <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white shadow-sm">
-          <table className="w-full text-left text-xs text-slate-600">
-            <thead className="bg-slate-50 text-[11px] font-semibold uppercase text-slate-500 border-b border-slate-200">
-              <tr>
-                <th className="px-4 py-3">Key</th>
-                <th className="px-4 py-3">Title</th>
-                <th className="px-4 py-3">Status</th>
-                <th className="px-4 py-3">Assignee</th>
-                <th className="px-4 py-3">Remaining</th>
-                <th className="px-4 py-3">Due Date</th>
-                <th className="px-4 py-3">Version</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-100">
-              {filteredTasks.map((t) => (
-                <tr
-                  key={t.id}
-                  onClick={() => onSelectTask(t)}
-                  className="hover:bg-slate-50/70 transition-colors cursor-pointer"
-                >
-                  <td className="px-4 py-3 font-mono font-bold text-slate-700 whitespace-nowrap">
-                    <div className="flex items-center gap-1.5">
-                      <span>{projectKey}-{t.number}</span>
-                      {(t as any).isBlocked && (
-                        <span className="text-[9px] font-bold text-amber-800 bg-amber-100 px-1 py-0.5 rounded border border-amber-200">
-                          🔒 Blocked
-                        </span>
-                      )}
-                    </div>
-                  </td>
-                  <td className="px-4 py-3 font-medium text-slate-900 max-w-xs truncate">
-                    {t.title}
-                  </td>
-                  <td className="px-4 py-3 whitespace-nowrap">
-                    <span
-                      className={`inline-block px-2 py-0.5 rounded text-[10px] font-bold uppercase border ${
-                        t.status === 'DONE'
-                          ? 'bg-emerald-50 text-emerald-800 border-emerald-200'
-                          : t.status === 'IN_PROGRESS'
-                          ? 'bg-blue-50 text-blue-800 border-blue-200'
-                          : t.status === 'CANCELLED'
-                          ? 'bg-rose-50 text-rose-800 border-rose-200'
-                          : 'bg-slate-100 text-slate-700 border-slate-300'
-                      }`}
-                    >
-                      {t.status}
-                    </span>
-                  </td>
-                  <td className="px-4 py-3 text-slate-600 whitespace-nowrap">
-                    {t.assigneeName ? `@${t.assigneeName}` : '—'}
-                  </td>
-                  <td className="px-4 py-3 whitespace-nowrap">
-                    {t.remainingEstimateWorkdays !== undefined ? `${t.remainingEstimateWorkdays} days` : '—'}
-                  </td>
-                  <td className="px-4 py-3 text-slate-500 whitespace-nowrap">
-                    {t.dueDate || '—'}
-                  </td>
-                  <td className="px-4 py-3 font-mono text-slate-400">
-                    v{t.version}
-                  </td>
+        <div className="overflow-hidden rounded-xl border border-slate-200/90 bg-white shadow-xs">
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-xs text-slate-600">
+              <thead className="bg-slate-50/75 text-[11px] font-semibold uppercase tracking-wider text-slate-500 border-b border-slate-200/70">
+                <tr>
+                  <th className="px-5 py-3">Task Key</th>
+                  <th className="px-5 py-3">Title</th>
+                  <th className="px-5 py-3">Status</th>
+                  <th className="px-5 py-3">Assignee</th>
+                  <th className="px-5 py-3">Remaining Workdays</th>
+                  <th className="px-5 py-3">Target Due</th>
+                  <th className="px-5 py-3">Version</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {filteredTasks.map((t) => (
+                  <tr
+                    key={t.id}
+                    onClick={() => onSelectTask(t)}
+                    className="hover:bg-slate-50/60 transition-colors cursor-pointer"
+                  >
+                    <td className="px-5 py-3.5 font-mono font-bold text-slate-700 whitespace-nowrap">
+                      <div className="flex items-center gap-1.5">
+                        <span className="bg-slate-100 px-2 py-0.5 rounded border border-slate-200 text-xs">
+                          {projectKey}-{t.number}
+                        </span>
+                        {(t as any).isBlocked && (
+                          <Badge variant="warning" size="xs" dot>
+                            Blocked
+                          </Badge>
+                        )}
+                      </div>
+                    </td>
+                    <td className="px-5 py-3.5 font-semibold text-slate-900 max-w-sm truncate">
+                      {t.title}
+                    </td>
+                    <td className="px-5 py-3.5 whitespace-nowrap">
+                      <Badge
+                        variant={
+                          t.status === 'DONE'
+                            ? 'success'
+                            : t.status === 'IN_PROGRESS'
+                            ? 'info'
+                            : t.status === 'CANCELLED'
+                            ? 'danger'
+                            : 'default'
+                        }
+                        size="xs"
+                      >
+                        {t.status}
+                      </Badge>
+                    </td>
+                    <td className="px-5 py-3.5 text-slate-600 whitespace-nowrap">
+                      {t.assigneeName ? `@${t.assigneeName}` : '—'}
+                    </td>
+                    <td className="px-5 py-3.5 whitespace-nowrap font-mono text-slate-700">
+                      {t.remainingEstimateWorkdays !== undefined ? `${t.remainingEstimateWorkdays}d` : '—'}
+                    </td>
+                    <td className="px-5 py-3.5 text-slate-500 whitespace-nowrap font-mono">
+                      {t.dueDate || '—'}
+                    </td>
+                    <td className="px-5 py-3.5 font-mono text-slate-400 text-[11px]">
+                      v{t.version}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </div>
       )}
     </div>

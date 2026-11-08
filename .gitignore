@@ -16,3 +16,4 @@ TEAM_OS_STARTER_BUNDLE_v1 (1)/
 
 *.tsbuildinfo
 .playwright-cli/
+backups/

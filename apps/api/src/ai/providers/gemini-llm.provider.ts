@@ -37,8 +37,9 @@ ${request.brief}
 
 Generate a structured plan with 3-7 discrete tasks and appropriate finish-to-start dependencies.`;
 
+      const model = process.env.GEMINI_MODEL || 'gemini-3.5-flash';
       const response = await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`,
+        `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`,
         {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -49,6 +50,7 @@ Generate a structured plan with 3-7 discrete tasks and appropriate finish-to-sta
               temperature: 0.2,
             },
           }),
+          signal: AbortSignal.timeout(15000),
         },
       );
 

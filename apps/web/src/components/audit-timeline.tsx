@@ -2,6 +2,8 @@
 
 import React, { useEffect, useState } from 'react';
 import type { AuditEventDto } from '@teamos/contracts';
+import { Badge, Select, EmptyState } from './ui';
+import { ShieldIcon, ClockIcon, LockIcon } from './ui/icons';
 
 interface AuditTimelineProps {
   orgId: string;
@@ -50,48 +52,54 @@ export function AuditTimeline({ orgId, apiBaseUrl }: AuditTimelineProps) {
     loadAudit();
   }, [orgId, apiBaseUrl, filterEntity]);
 
-  function getActionBadgeStyle(action: string): string {
-    if (action.includes('CREATED') || action.includes('ADDED')) {
-      return 'bg-emerald-100 text-emerald-800 border-emerald-200';
+  function getBadgeVariant(action: string) {
+    if (action.includes('CREATED') || action.includes('ADDED') || action.includes('APPROVED')) {
+      return 'success' as const;
     }
     if (action.includes('UPDATED') || action.includes('TRANSFERRED')) {
-      return 'bg-blue-100 text-blue-800 border-blue-200';
+      return 'info' as const;
     }
-    if (action.includes('REMOVED') || action.includes('REVOKED') || action.includes('DELETED')) {
-      return 'bg-rose-100 text-rose-800 border-rose-200';
+    if (action.includes('REMOVED') || action.includes('REVOKED') || action.includes('DELETED') || action.includes('REJECTED')) {
+      return 'danger' as const;
     }
-    return 'bg-slate-100 text-slate-800 border-slate-200';
+    return 'default' as const;
   }
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 pb-2 border-b border-slate-200">
+      {/* Header & Filter Controls */}
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 pb-3 border-b border-slate-200/80">
         <div>
-          <h3 className="text-base font-semibold text-slate-900">Audit Timeline</h3>
-          <p className="text-xs text-slate-500">
-            Immutable, append-only security log of all sensitive organizational state mutations.
+          <div className="flex items-center gap-2">
+            <h3 className="text-sm font-bold text-slate-900 tracking-tight">Security Audit Log</h3>
+            <Badge variant="purple" size="xs">
+              Append-Only
+            </Badge>
+          </div>
+          <p className="text-xs text-slate-500 mt-0.5">
+            Immutable cryptographic record of all sensitive organizational mutations and permissions.
           </p>
         </div>
 
-        <div className="flex items-center gap-2 text-xs">
-          <label className="font-semibold text-slate-600">Filter:</label>
+        <div className="flex items-center gap-2 w-full sm:w-auto">
+          <span className="text-xs font-semibold text-slate-500 whitespace-nowrap">Filter:</span>
           <select
             value={filterEntity}
             onChange={(e) => setFilterEntity(e.target.value)}
-            className="border border-slate-300 rounded-lg px-2.5 py-1.5 bg-white text-xs text-slate-800 focus:outline-none focus:ring-1 focus:ring-blue-500"
+            className="w-full sm:w-44 px-2.5 py-1.5 text-xs bg-white text-slate-800 border border-slate-300 rounded-lg shadow-xs focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-600"
           >
             <option value="ALL">All Entities</option>
             <option value="ORGANIZATION">Organization</option>
-            <option value="MEMBERSHIP">Membership</option>
-            <option value="INVITATION">Invitation</option>
-            <option value="PROJECT">Project</option>
-            <option value="TASK">Task</option>
+            <option value="MEMBERSHIP">Membership & RBAC</option>
+            <option value="INVITATION">Invitations</option>
+            <option value="PROJECT">Projects</option>
+            <option value="TASK">Tasks & Dependencies</option>
           </select>
         </div>
       </div>
 
       {error && (
-        <div className="p-3 text-xs text-rose-700 bg-rose-50 border border-rose-200 rounded-lg">
+        <div className="p-3 text-xs text-rose-700 bg-rose-50 border border-rose-200/80 rounded-lg">
           {error}
         </div>
       )}
@@ -99,57 +107,55 @@ export function AuditTimeline({ orgId, apiBaseUrl }: AuditTimelineProps) {
       {loading ? (
         <div className="p-8 text-center text-xs text-slate-400">Loading audit records...</div>
       ) : events.length === 0 ? (
-        <div className="p-8 text-center bg-white rounded-xl border border-slate-200">
-          <p className="text-sm font-medium text-slate-600">No audit events found</p>
-          <p className="text-xs text-slate-400 mt-1">
-            Actions like role updates, member removals, and invitations will appear here.
-          </p>
-        </div>
+        <EmptyState
+          icon={<LockIcon className="w-5 h-5" />}
+          title="No audit events found"
+          description="Actions such as project creation, role changes, member removals, and invitations will be securely recorded here."
+        />
       ) : (
-        <div className="relative border-l-2 border-slate-200 ml-4 space-y-6 py-2">
+        <div className="relative pl-6 space-y-4 before:absolute before:left-2.5 before:top-3 before:bottom-3 before:w-0.5 before:bg-slate-200">
           {events.map((evt) => {
             const isExpanded = expandedEventId === evt.id;
             const hasData = evt.beforeData || evt.afterData;
 
             return (
-              <div key={evt.id} className="relative pl-6">
-                {/* Dot */}
-                <div className="absolute -left-1.5 top-1.5 h-3 w-3 rounded-full border-2 border-white bg-blue-600 shadow-sm" />
+              <div key={evt.id} className="relative">
+                {/* Timeline node */}
+                <div className="absolute -left-[19px] top-3.5 w-2.5 h-2.5 rounded-full bg-blue-600 ring-4 ring-white" />
 
-                <div className="bg-white rounded-xl border border-slate-200 p-4 shadow-sm hover:border-slate-300 transition-colors space-y-2">
+                <div className="bg-white rounded-xl border border-slate-200/90 p-4 shadow-xs hover:border-slate-300 transition-all space-y-2.5">
                   <div className="flex flex-wrap items-center justify-between gap-2">
                     <div className="flex items-center gap-2">
-                      <span
-                        className={`inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-bold uppercase border ${getActionBadgeStyle(
-                          evt.action,
-                        )}`}
-                      >
+                      <Badge variant={getBadgeVariant(evt.action)} size="xs">
                         {evt.action}
-                      </span>
-                      <span className="text-xs font-semibold text-slate-700">
+                      </Badge>
+                      <span className="text-xs font-bold text-slate-800 tracking-tight">
                         {evt.entityType}
                       </span>
                     </div>
 
-                    <span className="text-xs text-slate-400">
-                      {new Date(evt.createdAt).toLocaleString()}
-                    </span>
+                    <div className="flex items-center gap-1.5 text-[11px] text-slate-400 font-mono">
+                      <ClockIcon className="w-3 h-3 text-slate-400" />
+                      <span>{new Date(evt.createdAt).toLocaleString()}</span>
+                    </div>
                   </div>
 
-                  <div className="text-xs text-slate-600 flex flex-wrap items-center gap-3">
+                  <div className="text-xs text-slate-600 flex flex-wrap items-center gap-x-4 gap-y-1">
                     <div>
-                      <span className="text-slate-400">Actor:</span>{' '}
-                      <span className="font-mono text-slate-800">
-                        {evt.actorType} ({evt.actorId.slice(0, 8)}...)
+                      <span className="text-slate-400 font-normal">Actor:</span>{' '}
+                      <span className="font-mono text-slate-800 font-medium">
+                        {evt.actorType} ({evt.actorId.slice(0, 8)})
                       </span>
                     </div>
                     <div>
-                      <span className="text-slate-400">Entity ID:</span>{' '}
-                      <span className="font-mono text-slate-800">{evt.entityId.slice(0, 8)}...</span>
+                      <span className="text-slate-400 font-normal">Entity ID:</span>{' '}
+                      <span className="font-mono text-slate-800 font-medium">
+                        {evt.entityId.slice(0, 8)}
+                      </span>
                     </div>
                     {evt.requestId && (
                       <div>
-                        <span className="text-slate-400">Req:</span>{' '}
+                        <span className="text-slate-400 font-normal">Request:</span>{' '}
                         <span className="font-mono text-slate-500 text-[11px]">
                           {evt.requestId.slice(0, 8)}
                         </span>
@@ -164,26 +170,27 @@ export function AuditTimeline({ orgId, apiBaseUrl }: AuditTimelineProps) {
                         onClick={() =>
                           setExpandedEventId((prev) => (prev === evt.id ? null : evt.id))
                         }
-                        className="text-xs text-blue-600 hover:text-blue-800 font-semibold"
+                        className="text-[11px] font-semibold text-blue-600 hover:text-blue-800 transition-colors inline-flex items-center gap-1"
                       >
-                        {isExpanded ? 'Hide Payload Diff' : 'View Payload Diff'}
+                        <span>{isExpanded ? 'Hide Payload Diff' : 'View Payload Diff'}</span>
+                        <span className="text-[10px]">{isExpanded ? '▲' : '▼'}</span>
                       </button>
 
                       {isExpanded && (
-                        <div className="mt-2 grid grid-cols-1 md:grid-cols-2 gap-2 text-xs font-mono bg-slate-50 p-3 rounded-lg border border-slate-200">
+                        <div className="mt-2.5 grid grid-cols-1 md:grid-cols-2 gap-2 text-xs font-mono bg-slate-900 text-slate-200 p-3 rounded-lg border border-slate-800 overflow-x-auto">
                           <div>
-                            <span className="text-slate-400 block font-sans font-bold text-[10px] uppercase mb-1">
+                            <span className="text-slate-400 block font-sans font-bold text-[10px] uppercase tracking-wider mb-1">
                               Before State
                             </span>
-                            <pre className="text-slate-700 whitespace-pre-wrap break-all text-[11px]">
+                            <pre className="text-emerald-400 whitespace-pre-wrap break-all text-[11px] leading-relaxed">
                               {evt.beforeData ? JSON.stringify(evt.beforeData, null, 2) : 'null'}
                             </pre>
                           </div>
                           <div>
-                            <span className="text-slate-400 block font-sans font-bold text-[10px] uppercase mb-1">
+                            <span className="text-slate-400 block font-sans font-bold text-[10px] uppercase tracking-wider mb-1">
                               After State
                             </span>
-                            <pre className="text-slate-700 whitespace-pre-wrap break-all text-[11px]">
+                            <pre className="text-blue-400 whitespace-pre-wrap break-all text-[11px] leading-relaxed">
                               {evt.afterData ? JSON.stringify(evt.afterData, null, 2) : 'null'}
                             </pre>
                           </div>
@@ -200,4 +207,3 @@ export function AuditTimeline({ orgId, apiBaseUrl }: AuditTimelineProps) {
     </div>
   );
 }
-

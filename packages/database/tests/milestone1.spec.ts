@@ -39,19 +39,19 @@ describe("Milestone 1: Database Architecture, Multi-Tenant RLS & Outbox Lifecycl
     apiPool = new Pool({ connectionString: API_DB_URL });
     workerPrisma = createWorkerPrismaClient(WORKER_DB_URL);
 
-    // Clean test state using owner role
+    // Clean test state using owner role (scoped to test fixtures only to preserve real user workspaces)
     await ownerPool.query(`
-      DELETE FROM public.outbox_events;
-      DELETE FROM public.audit_events;
-      DELETE FROM public.github_repositories;
-      DELETE FROM public.github_installations;
-      DELETE FROM public.ai_budget_reservations;
-      DELETE FROM public.task_dependencies;
-      DELETE FROM public.tasks;
-      DELETE FROM public.projects;
-      DELETE FROM public.memberships;
-      DELETE FROM public.organizations;
-      DELETE FROM public.users;
+      DELETE FROM public.outbox_events WHERE org_id IN ('${orgAId}', '${orgBId}');
+      DELETE FROM public.audit_events WHERE org_id IN ('${orgAId}', '${orgBId}');
+      DELETE FROM public.github_repositories WHERE org_id IN ('${orgAId}', '${orgBId}');
+      DELETE FROM public.github_installations WHERE org_id IN ('${orgAId}', '${orgBId}');
+      DELETE FROM public.ai_budget_reservations WHERE org_id IN ('${orgAId}', '${orgBId}');
+      DELETE FROM public.task_dependencies WHERE org_id IN ('${orgAId}', '${orgBId}');
+      DELETE FROM public.tasks WHERE org_id IN ('${orgAId}', '${orgBId}');
+      DELETE FROM public.projects WHERE org_id IN ('${orgAId}', '${orgBId}');
+      DELETE FROM public.memberships WHERE org_id IN ('${orgAId}', '${orgBId}');
+      DELETE FROM public.organizations WHERE id IN ('${orgAId}', '${orgBId}');
+      DELETE FROM public.users WHERE id IN ('${user1Id}', '${user2Id}', '${userExternalId}', '30000000-0000-0000-0000-000000000003');
     `);
 
     // Bootstrap baseline test records

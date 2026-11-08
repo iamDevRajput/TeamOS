@@ -52,7 +52,7 @@ export class AiService {
     // 3. Atomically reserve estimated budget before contacting the provider
     const resolvedIdempotencyKey =
       idempotencyKey ||
-      `ai-plan-${crypto.createHash('sha256').update(`${projectId}:${brief.trim()}`).digest('hex').slice(0, 24)}`;
+      `ai-plan-${crypto.randomUUID()}`;
 
     const estimatedCostCents = 5; // Conservative reservation: 5 cents per planning brief
     let reservation;
@@ -60,7 +60,7 @@ export class AiService {
       reservation = await reserveAiBudget(context, {
         idempotencyKey: resolvedIdempotencyKey,
         estimatedCostCents,
-        modelId: 'gemini-1.5-pro',
+        modelId: process.env.GEMINI_MODEL || 'gemini-3.5-flash',
       });
     } catch (budgetErr: any) {
       if (budgetErr.message?.includes('ERR_AI_BUDGET_EXCEEDED')) {
@@ -72,6 +72,7 @@ export class AiService {
     }
 
     let plan;
+    let reservationSettled = false;
     try {
       // 4. Call LLM Provider outside the database transaction
       plan = await this.llmProvider.generatePlan({
@@ -128,7 +129,15 @@ export class AiService {
       }
 
       // 6. Settle reservation with actual usage
-      await settleAiBudget(context, reservation.id, estimatedCostCents, 'gemini-1.5-pro');
+      if (reservation.state === 'RESERVED' || reservation.state === 'AWAITING_RECONCILIATION') {
+        await settleAiBudget(
+          context,
+          reservation.id,
+          estimatedCostCents,
+          process.env.GEMINI_MODEL || 'gemini-3.5-flash',
+        );
+        reservationSettled = true;
+      }
 
       // 7. Stage as a PENDING human-reviewable Proposal
       const proposalDto: CreateProposalDto = {
@@ -151,29 +160,31 @@ export class AiService {
 
       return await createProposal(context, projectId, proposalDto);
     } catch (err: any) {
-      // Differentiate timeout / ambiguous errors from definite failures
-      const isTimeout =
-        err.name === 'TimeoutError' ||
-        err.message?.toLowerCase().includes('timeout') ||
-        err.code === 'ETIMEDOUT';
+      if (!reservationSettled && reservation?.state === 'RESERVED') {
+        // Differentiate timeout / ambiguous errors from definite failures
+        const isTimeout =
+          err.name === 'TimeoutError' ||
+          err.message?.toLowerCase().includes('timeout') ||
+          err.code === 'ETIMEDOUT';
 
-      if (isTimeout) {
-        await markAiBudgetAwaitingReconciliation(
+        if (isTimeout) {
+          await markAiBudgetAwaitingReconciliation(
+            context,
+            reservation.id,
+            err.message || 'Provider request timed out',
+          );
+          throw new GatewayTimeoutException(
+            'AI provider request timed out. Budget held pending reconciliation.',
+          );
+        }
+
+        // On definite failure, release the reserved budget
+        await releaseAiBudget(
           context,
           reservation.id,
-          err.message || 'Provider request timed out',
-        );
-        throw new GatewayTimeoutException(
-          'AI provider request timed out. Budget held pending reconciliation.',
+          err.message || 'Plan generation or validation failure',
         );
       }
-
-      // On definite failure, release the reserved budget
-      await releaseAiBudget(
-        context,
-        reservation.id,
-        err.message || 'Plan generation or validation failure',
-      );
 
       throw err;
     }

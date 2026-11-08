@@ -10,6 +10,16 @@ import { DependencyGraph } from './dependency-graph';
 import { RiskOverviewPanel } from './risk-overview-panel';
 import { ProposalsPanel } from './proposals-panel';
 import { ReportsPanel } from './reports-panel';
+import { Badge, Button, EmptyState } from './ui';
+import {
+  CalendarIcon,
+  ClockIcon,
+  GitBranchIcon,
+  PlusIcon,
+  ActivityIcon,
+  FileTextIcon,
+  LayersIcon,
+} from './ui/icons';
 
 interface ProjectsPanelProps {
   orgId: string;
@@ -117,11 +127,11 @@ export function ProjectsPanel({
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-5">
       {/* Project Selector & Actions Header */}
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
-        <div className="flex items-center gap-3 overflow-x-auto max-w-full">
-          <span className="text-xs font-bold uppercase tracking-wider text-slate-400">
+      <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 bg-white p-3 sm:p-4 rounded-xl border border-slate-200/90 shadow-xs">
+        <div className="flex items-center gap-2 overflow-x-auto pb-1 sm:pb-0 scrollbar-none flex-1">
+          <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400 whitespace-nowrap mr-1">
             Projects:
           </span>
           {projects.map((p) => {
@@ -131,17 +141,23 @@ export function ProjectsPanel({
                 key={p.id}
                 type="button"
                 onClick={() => setSelectedProjectId(p.id)}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${
+                className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all whitespace-nowrap shadow-xs ${
                   isSelected
-                    ? 'bg-blue-600 text-white shadow-sm'
-                    : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+                    ? 'bg-blue-600 text-white shadow-xs border border-blue-700/40'
+                    : 'bg-slate-50 text-slate-700 hover:bg-slate-100 border border-slate-200/80'
                 }`}
               >
-                <span className="font-mono text-[11px] opacity-80">{p.key}</span>
+                <span
+                  className={`font-mono text-[10px] px-1.5 py-0.2 rounded ${
+                    isSelected ? 'bg-blue-700 text-blue-100' : 'bg-slate-200 text-slate-600'
+                  }`}
+                >
+                  {p.key}
+                </span>
                 <span>{p.name}</span>
                 <span
-                  className={`text-[10px] px-1.5 py-0.2 rounded-full ${
-                    isSelected ? 'bg-blue-700 text-blue-100' : 'bg-slate-200 text-slate-600'
+                  className={`text-[10px] px-1.5 py-0.2 rounded-full font-mono ${
+                    isSelected ? 'bg-blue-700/80 text-blue-100' : 'bg-slate-200 text-slate-600'
                   }`}
                 >
                   {p.taskCount ?? 0}
@@ -151,127 +167,144 @@ export function ProjectsPanel({
           })}
         </div>
 
-        <button
+        <Button
           type="button"
+          variant="secondary"
+          size="sm"
           onClick={() => setCreateProjectOpen(true)}
-          className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-lg transition-colors whitespace-nowrap"
+          leftIcon={<PlusIcon className="w-3.5 h-3.5" />}
+          className="whitespace-nowrap"
         >
-          <span>+</span> New Project
-        </button>
+          New Project
+        </Button>
       </div>
 
       {error && (
-        <div className="p-3 text-xs text-rose-700 bg-rose-50 border border-rose-200 rounded-lg">
+        <div className="p-3 text-xs text-rose-700 bg-rose-50 border border-rose-200/80 rounded-lg">
           {error}
         </div>
       )}
 
       {loadingProjects ? (
-        <div className="p-8 text-center text-xs text-slate-400">Loading projects...</div>
+        <div className="p-12 text-center text-xs text-slate-400">Loading projects...</div>
       ) : projects.length === 0 ? (
-        <div className="p-12 text-center bg-white rounded-xl border border-dashed border-slate-200 space-y-3">
-          <div className="text-3xl">📁</div>
-          <h4 className="text-base font-bold text-slate-900">No projects yet</h4>
-          <p className="text-xs text-slate-500 max-w-sm mx-auto">
-            Projects organize your tasks, team assignments, finish-to-start dependencies, and delivery risk calculations.
-          </p>
-          <button
-            type="button"
-            onClick={() => setCreateProjectOpen(true)}
-            className="px-4 py-2 text-xs font-semibold text-white bg-blue-600 hover:bg-blue-700 rounded-lg shadow-sm transition-colors"
-          >
-            + Create First Project
-          </button>
-        </div>
+        <EmptyState
+          icon={<LayersIcon className="w-5 h-5" />}
+          title="No projects in this organization"
+          description="Projects organize your tasks, team assignments, finish-to-start dependencies, and delivery risk calculations."
+          action={
+            <Button
+              type="button"
+              variant="primary"
+              size="sm"
+              onClick={() => setCreateProjectOpen(true)}
+            >
+              + Create First Project
+            </Button>
+          }
+        />
       ) : selectedProject ? (
         <div className="space-y-4">
-          {/* Active Project Details Card */}
-          <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
-            <div>
+          {/* Active Project Metadata Header */}
+          <div className="bg-white p-4 sm:p-5 rounded-xl border border-slate-200/90 shadow-xs flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+            <div className="space-y-1">
               <div className="flex items-center gap-2">
-                <span className="font-mono text-xs font-black bg-blue-50 text-blue-700 border border-blue-200 px-2 py-0.5 rounded">
+                <span className="font-mono text-xs font-bold bg-blue-50 text-blue-700 border border-blue-200/80 px-2 py-0.5 rounded">
                   {selectedProject.key}
                 </span>
-                <h3 className="text-lg font-bold text-slate-900">{selectedProject.name}</h3>
+                <h3 className="text-base font-bold text-slate-900 tracking-tight">
+                  {selectedProject.name}
+                </h3>
               </div>
-              <div className="flex items-center gap-4 text-xs text-slate-500 mt-1">
+              <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-slate-500 pt-0.5">
                 {selectedProject.startDate && (
-                  <span>Start: <strong className="text-slate-700">{selectedProject.startDate}</strong></span>
+                  <span className="flex items-center gap-1">
+                    <CalendarIcon className="w-3.5 h-3.5 text-slate-400" />
+                    <span>Start: <strong className="text-slate-700 font-mono">{selectedProject.startDate}</strong></span>
+                  </span>
                 )}
                 {selectedProject.dueDate && (
-                  <span>Target Delivery: <strong className="text-slate-700">{selectedProject.dueDate}</strong></span>
+                  <span className="flex items-center gap-1">
+                    <ClockIcon className="w-3.5 h-3.5 text-slate-400" />
+                    <span>Target Due: <strong className="text-slate-700 font-mono">{selectedProject.dueDate}</strong></span>
+                  </span>
                 )}
-                <span>Timezone: {selectedProject.timezone}</span>
+                <span className="text-slate-400">Timezone: {selectedProject.timezone}</span>
               </div>
             </div>
 
-            <div className="flex items-center gap-2">
-              <button
-                type="button"
-                onClick={() => setCreateTaskOpen(true)}
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-white bg-blue-600 hover:bg-blue-700 rounded-lg shadow-sm transition-colors"
-              >
-                <span>+</span> Add Task
-              </button>
-            </div>
+            <Button
+              type="button"
+              variant="primary"
+              size="sm"
+              onClick={() => setCreateTaskOpen(true)}
+              leftIcon={<PlusIcon className="w-3.5 h-3.5" />}
+            >
+              Add Task
+            </Button>
           </div>
 
-          {/* Sub Navigation */}
-          <div className="flex items-center gap-2 border-b border-slate-200 text-xs font-semibold">
+          {/* Sub Navigation Tabs */}
+          <div className="flex items-center gap-1 sm:gap-2 border-b border-slate-200/90 text-xs font-semibold overflow-x-auto scrollbar-none">
             <button
               type="button"
               onClick={() => setProjectTab('tasks')}
-              className={`pb-2.5 px-2 border-b-2 transition-colors ${
+              className={`pb-2.5 px-3 border-b-2 transition-all whitespace-nowrap flex items-center gap-1.5 ${
                 projectTab === 'tasks'
                   ? 'border-blue-600 text-blue-600 font-bold'
                   : 'border-transparent text-slate-500 hover:text-slate-800'
               }`}
             >
-              Tasks & Board ({tasks.length})
+              <span>Tasks & Board</span>
+              <span className="font-mono text-[10px] text-slate-400">({tasks.length})</span>
             </button>
             <button
               type="button"
               onClick={() => setProjectTab('dependencies')}
-              className={`pb-2.5 px-2 border-b-2 transition-colors ${
+              className={`pb-2.5 px-3 border-b-2 transition-all whitespace-nowrap flex items-center gap-1.5 ${
                 projectTab === 'dependencies'
                   ? 'border-blue-600 text-blue-600 font-bold'
                   : 'border-transparent text-slate-500 hover:text-slate-800'
               }`}
             >
-              Dependency Graph (DAG)
+              <GitBranchIcon className="w-3.5 h-3.5" />
+              <span>Dependency Graph (DAG)</span>
             </button>
             <button
               type="button"
               onClick={() => setProjectTab('risk')}
-              className={`pb-2.5 px-2 border-b-2 transition-colors ${
+              className={`pb-2.5 px-3 border-b-2 transition-all whitespace-nowrap flex items-center gap-1.5 ${
                 projectTab === 'risk'
                   ? 'border-blue-600 text-blue-600 font-bold'
                   : 'border-transparent text-slate-500 hover:text-slate-800'
               }`}
             >
-              Delivery Risk & What-If
+              <ActivityIcon className="w-3.5 h-3.5" />
+              <span>Delivery Risk & What-If</span>
             </button>
             <button
               type="button"
               onClick={() => setProjectTab('proposals')}
-              className={`pb-2.5 px-2 border-b-2 transition-colors ${
+              className={`pb-2.5 px-3 border-b-2 transition-all whitespace-nowrap flex items-center gap-1.5 ${
                 projectTab === 'proposals'
                   ? 'border-blue-600 text-blue-600 font-bold'
                   : 'border-transparent text-slate-500 hover:text-slate-800'
               }`}
             >
-              Proposals & Plans
+              <LayersIcon className="w-3.5 h-3.5" />
+              <span>Proposals & Plans</span>
             </button>
             <button
               type="button"
               onClick={() => setProjectTab('reports')}
-              className={`pb-2.5 px-2 border-b-2 transition-colors ${
+              className={`pb-2.5 px-3 border-b-2 transition-all whitespace-nowrap flex items-center gap-1.5 ${
                 projectTab === 'reports'
                   ? 'border-blue-600 text-blue-600 font-bold'
                   : 'border-transparent text-slate-500 hover:text-slate-800'
               }`}
             >
-              Health Reports
+              <FileTextIcon className="w-3.5 h-3.5" />
+              <span>Health Reports</span>
             </button>
           </div>
 

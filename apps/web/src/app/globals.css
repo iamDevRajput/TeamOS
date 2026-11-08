@@ -2,14 +2,104 @@
 @tailwind components;
 @tailwind utilities;
 
-:root {
-  --foreground-rgb: 15, 23, 42;
-  --background-rgb: 248, 250, 252;
+@layer base {
+  :root {
+    --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+
+    /* Backgrounds & Surfaces */
+    --background: 248 250 252; /* slate-50 */
+    --surface: 255 255 255; /* white */
+    --surface-secondary: 241 245 249; /* slate-100 */
+    --surface-tertiary: 226 232 240; /* slate-200 */
+
+    /* Foregrounds */
+    --foreground: 15 23 42; /* slate-900 */
+    --foreground-muted: 100 116 139; /* slate-500 */
+    --foreground-subtle: 148 163 184; /* slate-400 */
+
+    /* Borders */
+    --border: 226 232 240; /* slate-200 */
+    --border-hover: 203 213 225; /* slate-300 */
+    --border-strong: 148 163 184; /* slate-400 */
+
+    /* Brand / Primary Accent (Engineering Indigo) */
+    --primary: 37 99 235; /* blue-600 */
+    --primary-hover: 29 78 216; /* blue-700 */
+    --primary-foreground: 255 255 255;
+    --primary-surface: 239 246 255; /* blue-50 */
+    --primary-border: 191 219 254; /* blue-200 */
+
+    /* Semantic: Health / Low Risk */
+    --success: 16 185 129; /* emerald-500 */
+    --success-surface: 236 253 245; /* emerald-50 */
+    --success-border: 167 243 208; /* emerald-200 */
+    --success-foreground: 6 95 70; /* emerald-800 */
+
+    /* Semantic: Warning / Medium Risk */
+    --warning: 245 158 11; /* amber-500 */
+    --warning-surface: 254 243 199; /* amber-50 */
+    --warning-border: 253 230 138; /* amber-200 */
+    --warning-foreground: 146 64 14; /* amber-800 */
+
+    /* Semantic: Danger / High Risk */
+    --danger: 239 68 68; /* red-500 */
+    --danger-surface: 254 242 242; /* red-50 */
+    --danger-border: 254 202 202; /* red-200 */
+    --danger-foreground: 153 27 27; /* red-800 */
+
+    /* Focus ring */
+    --ring: 59 130 246; /* blue-500 */
+  }
+
+  * {
+    border-color: rgb(var(--border));
+  }
+
+  html {
+    color-scheme: light;
+    text-rendering: optimizeLegibility;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  body {
+    background-color: rgb(var(--background));
+    color: rgb(var(--foreground));
+    font-family: var(--font-sans);
+    letter-spacing: -0.011em;
+  }
+
+  /* Accessible focus indicators */
+  :focus-visible {
+    outline: 2px solid rgb(var(--ring));
+    outline-offset: 2px;
+  }
+
+  /* Browser surface theming */
+  ::selection {
+    background-color: rgba(37, 99, 235, 0.18);
+    color: rgb(15, 23, 42);
+  }
+
+  /* Custom subtle scrollbars */
+  ::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  ::-webkit-scrollbar-thumb {
+    background: rgb(203 213 225);
+    border-radius: 9999px;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: rgb(148 163 184);
+  }
 }
 
-body {
-  color: rgb(var(--foreground-rgb));
-  background: rgb(var(--background-rgb));
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+/* Tabular figures for metrics and data */
+.tabular-nums {
+  font-variant-numeric: tabular-nums;
 }
-

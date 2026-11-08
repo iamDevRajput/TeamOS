@@ -2,6 +2,7 @@
 
 import React, { useState } from 'react';
 import type { ProjectDto } from '@teamos/contracts';
+import { Modal, Input, Button } from './ui';
 
 interface CreateProjectModalProps {
   isOpen: boolean;
@@ -25,12 +26,9 @@ export function CreateProjectModal({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  if (!isOpen) return null;
-
   function handleNameChange(val: string) {
     setName(val);
     if (!key || key.length === 0) {
-      // Auto-suggest 3-4 letter uppercase key from words
       const words = val.trim().split(/\s+/);
       const suggested = words
         .map((w) => w.charAt(0))
@@ -92,102 +90,65 @@ export function CreateProjectModal({
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-sm p-4">
-      <div className="w-full max-w-md rounded-xl bg-white p-6 shadow-xl border border-slate-200">
-        <div className="flex items-center justify-between pb-4 border-b border-slate-100">
-          <h2 className="text-lg font-bold text-slate-900">Create New Project</h2>
-          <button
-            onClick={onClose}
-            className="text-slate-400 hover:text-slate-600 transition-colors text-sm font-semibold p-1"
-          >
-            ✕
-          </button>
+    <Modal
+      isOpen={isOpen}
+      onClose={onClose}
+      title="Create New Project"
+      description="Projects organize your tasks, finish-to-start dependencies, and Critical Path Method schedules."
+      maxWidth="md"
+    >
+      <form onSubmit={handleSubmit} className="space-y-4">
+        {error && (
+          <div className="p-3 text-xs text-rose-700 bg-rose-50 border border-rose-200/80 rounded-lg">
+            {error}
+          </div>
+        )}
+
+        <Input
+          label="Project Name"
+          required
+          value={name}
+          onChange={(e) => handleNameChange(e.target.value)}
+          placeholder="e.g. Core Engine"
+          helperText="The project's descriptive name."
+        />
+
+        <Input
+          label="Project Key"
+          required
+          value={key}
+          onChange={(e) => setKey(e.target.value.toUpperCase())}
+          placeholder="CORE"
+          maxLength={8}
+          className="font-mono uppercase"
+          helperText="2-8 uppercase letters/numbers. Prefixes task identifiers (e.g. CORE-1)."
+        />
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <Input
+            label="Start Date (Optional)"
+            type="date"
+            value={startDate}
+            onChange={(e) => setStartDate(e.target.value)}
+          />
+          <Input
+            label="Target Delivery Date (Optional)"
+            type="date"
+            value={dueDate}
+            onChange={(e) => setDueDate(e.target.value)}
+            helperText="Delivery risk engine evaluates delay against this target date."
+          />
         </div>
 
-        <form onSubmit={handleSubmit} className="mt-4 space-y-4">
-          {error && (
-            <div className="p-3 text-xs text-rose-700 bg-rose-50 border border-rose-200 rounded-lg">
-              {error}
-            </div>
-          )}
-
-          <div>
-            <label className="block text-xs font-semibold uppercase text-slate-600 mb-1">
-              Project Name <span className="text-rose-500">*</span>
-            </label>
-            <input
-              type="text"
-              required
-              value={name}
-              onChange={(e) => handleNameChange(e.target.value)}
-              placeholder="e.g. Core Engine"
-              className="w-full px-3 py-2 text-sm border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
-          </div>
-
-          <div>
-            <label className="block text-xs font-semibold uppercase text-slate-600 mb-1">
-              Project Key <span className="text-rose-500">*</span>
-            </label>
-            <input
-              type="text"
-              required
-              value={key}
-              onChange={(e) => setKey(e.target.value.toUpperCase())}
-              placeholder="e.g. CORE"
-              maxLength={8}
-              className="w-full px-3 py-2 text-sm font-mono uppercase border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
-            <p className="text-xs text-slate-400 mt-1">
-              2-8 letters/numbers. Prefixes all project task numbers (e.g. CORE-1, CORE-2).
-            </p>
-          </div>
-
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="block text-xs font-semibold uppercase text-slate-600 mb-1">
-                Start Date
-              </label>
-              <input
-                type="date"
-                value={startDate}
-                onChange={(e) => setStartDate(e.target.value)}
-                className="w-full px-3 py-2 text-xs border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
-            </div>
-            <div>
-              <label className="block text-xs font-semibold uppercase text-slate-600 mb-1">
-                Target Due Date
-              </label>
-              <input
-                type="date"
-                value={dueDate}
-                onChange={(e) => setDueDate(e.target.value)}
-                className="w-full px-3 py-2 text-xs border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
-            </div>
-          </div>
-
-          <div className="flex justify-end gap-3 pt-4 border-t border-slate-100">
-            <button
-              type="button"
-              onClick={onClose}
-              disabled={loading}
-              className="px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-100 rounded-lg transition-colors"
-            >
-              Cancel
-            </button>
-            <button
-              type="submit"
-              disabled={loading}
-              className="px-4 py-2 text-sm font-semibold text-white bg-blue-600 hover:bg-blue-700 disabled:opacity-50 rounded-lg shadow-sm transition-colors"
-            >
-              {loading ? 'Creating...' : 'Create Project'}
-            </button>
-          </div>
-        </form>
-      </div>
-    </div>
+        <div className="pt-3 flex items-center justify-end gap-2.5">
+          <Button type="button" variant="ghost" onClick={onClose} disabled={loading}>
+            Cancel
+          </Button>
+          <Button type="submit" variant="primary" isLoading={loading}>
+            Create Project
+          </Button>
+        </div>
+      </form>
+    </Modal>
   );
 }
-

@@ -2,6 +2,7 @@
 
 import React, { useState } from 'react';
 import type { TaskDto, TaskStatus, OrgMemberDto } from '@teamos/contracts';
+import { Modal, Input, Textarea, Select, Button } from './ui';
 
 interface CreateTaskModalProps {
   isOpen: boolean;
@@ -12,6 +13,7 @@ interface CreateTaskModalProps {
   members: OrgMemberDto[];
   apiBaseUrl: string;
   onSuccess: (task: TaskDto) => void;
+  initialStatus?: TaskStatus;
 }
 
 export function CreateTaskModal({
@@ -23,17 +25,28 @@ export function CreateTaskModal({
   members,
   apiBaseUrl,
   onSuccess,
+  initialStatus = 'TODO',
 }: CreateTaskModalProps) {
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
-  const [status, setStatus] = useState<TaskStatus>('TODO');
+  const [status, setStatus] = useState<TaskStatus>(initialStatus);
   const [assigneeId, setAssigneeId] = useState('');
   const [estimate, setEstimate] = useState<string>('3');
   const [dueDate, setDueDate] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  if (!isOpen) return null;
+  React.useEffect(() => {
+    if (isOpen) {
+      setStatus(initialStatus);
+      setTitle('');
+      setDescription('');
+      setAssigneeId('');
+      setEstimate('3');
+      setDueDate('');
+      setError(null);
+    }
+  }, [isOpen, initialStatus]);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -84,140 +97,91 @@ export function CreateTaskModal({
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-sm p-4">
-      <div className="w-full max-w-lg rounded-xl bg-white p-6 shadow-xl border border-slate-200">
-        <div className="flex items-center justify-between pb-4 border-b border-slate-100">
-          <div>
-            <h2 className="text-lg font-bold text-slate-900">New Task</h2>
-            <p className="text-xs text-slate-400">Project: {projectKey}</p>
+    <Modal
+      isOpen={isOpen}
+      onClose={onClose}
+      title="Create New Task"
+      description={`Project ${projectKey} · Tasks form the foundation for CPM critical path forecasting.`}
+      maxWidth="lg"
+    >
+      <form onSubmit={handleSubmit} className="space-y-4">
+        {error && (
+          <div className="p-3 text-xs text-rose-700 bg-rose-50 border border-rose-200/80 rounded-lg">
+            {error}
           </div>
-          <button
-            onClick={onClose}
-            className="text-slate-400 hover:text-slate-600 transition-colors text-sm font-semibold p-1"
+        )}
+
+        <Input
+          label="Task Title"
+          required
+          value={title}
+          onChange={(e) => setTitle(e.target.value)}
+          placeholder="e.g. Implement deterministic critical path algorithm"
+        />
+
+        <Textarea
+          label="Description (Optional)"
+          rows={3}
+          value={description}
+          onChange={(e) => setDescription(e.target.value)}
+          placeholder="Technical context, acceptance criteria, PR links..."
+        />
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <Select
+            label="Initial Status"
+            value={status}
+            onChange={(e) => setStatus(e.target.value as TaskStatus)}
           >
-            ✕
-          </button>
+            <option value="TODO">To Do</option>
+            <option value="IN_PROGRESS">In Progress</option>
+            <option value="DONE">Done</option>
+            <option value="CANCELLED">Cancelled</option>
+          </Select>
+
+          <Select
+            label="Assignee"
+            value={assigneeId}
+            onChange={(e) => setAssigneeId(e.target.value)}
+          >
+            <option value="">Unassigned</option>
+            {members.map((m) => (
+              <option key={m.userId} value={m.userId}>
+                {m.displayName || m.login} (@{m.login})
+              </option>
+            ))}
+          </Select>
         </div>
 
-        <form onSubmit={handleSubmit} className="mt-4 space-y-4">
-          {error && (
-            <div className="p-3 text-xs text-rose-700 bg-rose-50 border border-rose-200 rounded-lg">
-              {error}
-            </div>
-          )}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <Input
+            label="Remaining Workdays"
+            type="number"
+            min="0"
+            max="365"
+            value={estimate}
+            onChange={(e) => setEstimate(e.target.value)}
+            placeholder="Workdays (e.g. 3)"
+            helperText="Deterministic duration used for delivery schedule forecast."
+          />
 
-          <div>
-            <label className="block text-xs font-semibold uppercase text-slate-600 mb-1">
-              Title <span className="text-rose-500">*</span>
-            </label>
-            <input
-              type="text"
-              required
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              placeholder="e.g. Implement deterministic critical path algorithm"
-              className="w-full px-3 py-2 text-sm border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
-          </div>
+          <Input
+            label="Due Date (Optional)"
+            type="date"
+            value={dueDate}
+            onChange={(e) => setDueDate(e.target.value)}
+          />
+        </div>
 
-          <div>
-            <label className="block text-xs font-semibold uppercase text-slate-600 mb-1">
-              Description <span className="text-slate-400 font-normal lowercase">(optional)</span>
-            </label>
-            <textarea
-              rows={3}
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              placeholder="Technical context, acceptance criteria, or PR references..."
-              className="w-full px-3 py-2 text-xs border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
-          </div>
-
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="block text-xs font-semibold uppercase text-slate-600 mb-1">
-                Status
-              </label>
-              <select
-                value={status}
-                onChange={(e) => setStatus(e.target.value as TaskStatus)}
-                className="w-full px-3 py-2 text-xs border border-slate-300 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-              >
-                <option value="TODO">To Do</option>
-                <option value="IN_PROGRESS">In Progress</option>
-                <option value="DONE">Done</option>
-                <option value="CANCELLED">Cancelled</option>
-              </select>
-            </div>
-
-            <div>
-              <label className="block text-xs font-semibold uppercase text-slate-600 mb-1">
-                Assignee
-              </label>
-              <select
-                value={assigneeId}
-                onChange={(e) => setAssigneeId(e.target.value)}
-                className="w-full px-3 py-2 text-xs border border-slate-300 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-              >
-                <option value="">Unassigned</option>
-                {members.map((m) => (
-                  <option key={m.userId} value={m.userId}>
-                    {m.displayName || m.login} (@{m.login})
-                  </option>
-                ))}
-              </select>
-            </div>
-          </div>
-
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="block text-xs font-semibold uppercase text-slate-600 mb-1">
-                Remaining Workdays
-              </label>
-              <input
-                type="number"
-                min="0"
-                max="365"
-                value={estimate}
-                onChange={(e) => setEstimate(e.target.value)}
-                placeholder="Workdays (e.g. 5)"
-                className="w-full px-3 py-2 text-xs border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
-            </div>
-
-            <div>
-              <label className="block text-xs font-semibold uppercase text-slate-600 mb-1">
-                Due Date
-              </label>
-              <input
-                type="date"
-                value={dueDate}
-                onChange={(e) => setDueDate(e.target.value)}
-                className="w-full px-3 py-2 text-xs border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
-            </div>
-          </div>
-
-          <div className="flex justify-end gap-3 pt-4 border-t border-slate-100">
-            <button
-              type="button"
-              onClick={onClose}
-              disabled={loading}
-              className="px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-100 rounded-lg transition-colors"
-            >
-              Cancel
-            </button>
-            <button
-              type="submit"
-              disabled={loading}
-              className="px-4 py-2 text-sm font-semibold text-white bg-blue-600 hover:bg-blue-700 disabled:opacity-50 rounded-lg shadow-sm transition-colors"
-            >
-              {loading ? 'Creating...' : 'Create Task'}
-            </button>
-          </div>
-        </form>
-      </div>
-    </div>
+        <div className="pt-3 flex items-center justify-end gap-2.5">
+          <Button type="button" variant="ghost" onClick={onClose} disabled={loading}>
+            Cancel
+          </Button>
+          <Button type="submit" variant="primary" isLoading={loading}>
+            Create Task
+          </Button>
+        </div>
+      </form>
+    </Modal>
   );
 }
-

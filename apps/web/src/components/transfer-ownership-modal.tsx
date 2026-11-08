@@ -2,6 +2,8 @@
 
 import React, { useState } from 'react';
 import type { OrgMemberDto } from '@teamos/contracts';
+import { Modal, Select, Button } from './ui';
+import { AlertTriangleIcon } from './ui/icons';
 
 interface TransferOwnershipModalProps {
   isOpen: boolean;
@@ -26,8 +28,6 @@ export function TransferOwnershipModal({
   const [confirmed, setConfirmed] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-
-  if (!isOpen) return null;
 
   const eligibleMembers = members.filter((m) => m.userId !== currentUserId);
 
@@ -71,88 +71,79 @@ export function TransferOwnershipModal({
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-sm p-4">
-      <div className="w-full max-w-md rounded-xl bg-white p-6 shadow-xl border border-slate-200">
-        <div className="flex items-center justify-between pb-4 border-b border-slate-100">
-          <h2 className="text-lg font-bold text-rose-700">Transfer Organization Ownership</h2>
-          <button
-            onClick={onClose}
-            className="text-slate-400 hover:text-slate-600 transition-colors text-sm font-semibold p-1"
-          >
-            ✕
-          </button>
+    <Modal
+      isOpen={isOpen}
+      onClose={onClose}
+      title="Transfer Organization Ownership"
+      description="Transfer primary administrative ownership of this organization workspace."
+      maxWidth="md"
+    >
+      <form onSubmit={handleSubmit} className="space-y-4">
+        <div className="p-3.5 bg-rose-50/90 border border-rose-200/90 rounded-lg text-rose-900 space-y-1.5">
+          <div className="flex items-center gap-1.5 font-bold text-xs text-rose-800">
+            <AlertTriangleIcon className="w-4 h-4 text-rose-600" />
+            <span>Irreversible Action</span>
+          </div>
+          <p className="text-[11px] text-rose-700 leading-relaxed">
+            Transferring ownership assigns the <strong>OWNER</strong> role to another member and demotes you to <strong>ADMIN</strong>. You will no longer be able to demote or remove the new owner.
+          </p>
         </div>
 
-        <form onSubmit={handleSubmit} className="mt-4 space-y-4">
-          <div className="p-3 bg-rose-50 border border-rose-200 rounded-lg text-rose-800 text-xs leading-relaxed">
-            <p className="font-bold mb-1">⚠️ Warning: Irreversible Action</p>
-            Transferring ownership assigns the <strong>OWNER</strong> role to another member and demotes you to <strong>ADMIN</strong>. You will no longer be able to demote or remove the new owner.
+        {error && (
+          <div className="p-3 text-xs text-rose-700 bg-rose-50 border border-rose-200/80 rounded-lg">
+            {error}
           </div>
+        )}
 
-          {error && (
-            <div className="p-3 text-xs text-rose-700 bg-rose-50 border border-rose-200 rounded-lg">
-              {error}
-            </div>
-          )}
+        {eligibleMembers.length === 0 ? (
+          <p className="text-xs text-slate-500 italic p-3 bg-slate-50 border border-slate-200/80 rounded-lg">
+            No other members found in this organization. Invite teammates before transferring ownership.
+          </p>
+        ) : (
+          <Select
+            label="Select New Owner"
+            value={selectedUserId}
+            onChange={(e) => setSelectedUserId(e.target.value)}
+          >
+            <option value="">-- Choose a team member --</option>
+            {eligibleMembers.map((m) => (
+              <option key={m.userId} value={m.userId}>
+                {m.displayName || m.login || m.userId} (@{m.login}, currently {m.role})
+              </option>
+            ))}
+          </Select>
+        )}
 
-          <div>
-            <label className="block text-xs font-semibold uppercase text-slate-600 mb-1">
-              Select New Owner <span className="text-rose-500">*</span>
-            </label>
-            {eligibleMembers.length === 0 ? (
-              <p className="text-xs text-slate-500 italic p-3 bg-slate-50 border border-slate-200 rounded-lg">
-                No other members found in this organization. Invite teammates before transferring ownership.
-              </p>
-            ) : (
-              <select
-                value={selectedUserId}
-                onChange={(e) => setSelectedUserId(e.target.value)}
-                className="w-full px-3 py-2 text-sm border border-slate-300 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-rose-500 focus:border-rose-500"
-              >
-                <option value="">-- Choose member --</option>
-                {eligibleMembers.map((m) => (
-                  <option key={m.userId} value={m.userId}>
-                    {m.displayName || m.login} (@{m.login}) — {m.role}
-                  </option>
-                ))}
-              </select>
-            )}
-          </div>
-
-          {eligibleMembers.length > 0 && (
-            <label className="flex items-start gap-2 pt-2 cursor-pointer">
+        {eligibleMembers.length > 0 && (
+          <div className="pt-1">
+            <label className="flex items-start gap-2.5 cursor-pointer select-none text-xs text-slate-700">
               <input
                 type="checkbox"
                 checked={confirmed}
                 onChange={(e) => setConfirmed(e.target.checked)}
                 className="mt-0.5 rounded border-slate-300 text-rose-600 focus:ring-rose-500"
               />
-              <span className="text-xs text-slate-600">
-                I understand that I am transferring full ownership and will become an Admin.
+              <span>
+                I understand that I am transferring primary ownership and will be demoted to Admin.
               </span>
             </label>
-          )}
-
-          <div className="flex justify-end gap-3 pt-4 border-t border-slate-100">
-            <button
-              type="button"
-              onClick={onClose}
-              disabled={loading}
-              className="px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-100 rounded-lg transition-colors"
-            >
-              Cancel
-            </button>
-            <button
-              type="submit"
-              disabled={loading || eligibleMembers.length === 0 || !confirmed}
-              className="px-4 py-2 text-sm font-semibold text-white bg-rose-600 hover:bg-rose-700 disabled:opacity-50 rounded-lg shadow-sm transition-colors"
-            >
-              {loading ? 'Transferring...' : 'Transfer Ownership'}
-            </button>
           </div>
-        </form>
-      </div>
-    </div>
+        )}
+
+        <div className="pt-3 flex items-center justify-end gap-2.5">
+          <Button type="button" variant="ghost" onClick={onClose} disabled={loading}>
+            Cancel
+          </Button>
+          <Button
+            type="submit"
+            variant="danger"
+            isLoading={loading}
+            disabled={!selectedUserId || !confirmed}
+          >
+            Confirm Transfer
+          </Button>
+        </div>
+      </form>
+    </Modal>
   );
 }
-

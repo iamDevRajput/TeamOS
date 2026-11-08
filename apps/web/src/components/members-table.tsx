@@ -2,6 +2,8 @@
 
 import React, { useState } from 'react';
 import type { OrgMemberDto, OrgRole } from '@teamos/contracts';
+import { Badge, Button } from './ui';
+import { UsersIcon, ShieldIcon } from './ui/icons';
 
 interface MembersTableProps {
   orgId: string;
@@ -95,114 +97,131 @@ export function MembersTable({
   return (
     <div className="space-y-4">
       {actionError && (
-        <div className="p-3 text-xs text-rose-700 bg-rose-50 border border-rose-200 rounded-lg">
+        <div className="p-3 text-xs text-rose-700 bg-rose-50 border border-rose-200/80 rounded-lg">
           {actionError}
         </div>
       )}
 
-      <div className="overflow-x-auto rounded-lg border border-slate-200 bg-white">
-        <table className="w-full text-left text-sm text-slate-600">
-          <thead className="bg-slate-50 text-xs font-semibold uppercase text-slate-500 border-b border-slate-200">
-            <tr>
-              <th scope="col" className="px-6 py-3">Member</th>
-              <th scope="col" className="px-6 py-3">Role</th>
-              <th scope="col" className="px-6 py-3">Joined</th>
-              {isOwner && <th scope="col" className="px-6 py-3 text-right">Actions</th>}
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-slate-100">
-            {members.map((member) => {
-              const isSelf = member.userId === currentUserId;
-              const isTargetOwner = member.role === 'OWNER';
+      <div className="overflow-hidden rounded-xl border border-slate-200/90 bg-white shadow-xs">
+        <div className="px-5 py-3.5 border-b border-slate-100 flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <UsersIcon className="w-4 h-4 text-slate-500" />
+            <h3 className="text-xs font-bold uppercase tracking-wider text-slate-700">
+              Team Members ({members.length})
+            </h3>
+          </div>
+          <span className="text-[11px] text-slate-400">PostgreSQL RLS Protected</span>
+        </div>
 
-              return (
-                <tr key={member.userId} className="hover:bg-slate-50/70 transition-colors">
-                  <td className="px-6 py-4 flex items-center gap-3">
-                    {member.avatarUrl ? (
-                      <img
-                        src={member.avatarUrl}
-                        alt={member.login}
-                        className="w-8 h-8 rounded-full border border-slate-200"
-                      />
-                    ) : (
-                      <div className="w-8 h-8 rounded-full bg-slate-200 flex items-center justify-center font-bold text-slate-600 text-xs">
-                        {member.login.slice(0, 2).toUpperCase()}
+        <div className="overflow-x-auto">
+          <table className="w-full text-left text-xs text-slate-600">
+            <thead className="bg-slate-50/75 text-[11px] font-semibold uppercase tracking-wider text-slate-500 border-b border-slate-200/70">
+              <tr>
+                <th scope="col" className="px-5 py-3">Member</th>
+                <th scope="col" className="px-5 py-3">Role</th>
+                <th scope="col" className="px-5 py-3">Joined Date</th>
+                {isOwner && <th scope="col" className="px-5 py-3 text-right">Access Controls</th>}
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-100">
+              {members.map((member) => {
+                const isSelf = member.userId === currentUserId;
+                const isTargetOwner = member.role === 'OWNER';
+
+                return (
+                  <tr key={member.userId} className="hover:bg-slate-50/60 transition-colors">
+                    <td className="px-5 py-3.5 flex items-center gap-3">
+                      {member.avatarUrl ? (
+                        <img
+                          src={member.avatarUrl}
+                          alt={member.login}
+                          className="w-7 h-7 rounded-full border border-slate-200 object-cover"
+                        />
+                      ) : (
+                        <div className="w-7 h-7 rounded-full bg-slate-100 border border-slate-200 flex items-center justify-center font-bold text-slate-600 text-[11px]">
+                          {member.login.slice(0, 2).toUpperCase()}
+                        </div>
+                      )}
+                      <div>
+                        <div className="font-semibold text-slate-900 flex items-center gap-1.5">
+                          <span>{member.displayName || member.login}</span>
+                          {isSelf && (
+                            <span className="text-[9px] font-bold uppercase bg-slate-100 text-slate-600 px-1.5 py-0.2 rounded">
+                              You
+                            </span>
+                          )}
+                        </div>
+                        <div className="text-[11px] text-slate-400">@{member.login}</div>
                       </div>
-                    )}
-                    <div>
-                      <div className="font-semibold text-slate-900 flex items-center gap-2">
-                        {member.displayName || member.login}
-                        {isSelf && (
-                          <span className="text-[10px] font-normal uppercase bg-slate-100 text-slate-600 px-1.5 py-0.5 rounded">
-                            You
-                          </span>
-                        )}
-                      </div>
-                      <div className="text-xs text-slate-500">@{member.login}</div>
-                    </div>
-                  </td>
+                    </td>
 
-                  <td className="px-6 py-4">
-                    <span
-                      className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold ${
-                        member.role === 'OWNER'
-                          ? 'bg-purple-100 text-purple-800 border border-purple-200'
-                          : member.role === 'ADMIN'
-                          ? 'bg-blue-100 text-blue-800 border border-blue-200'
-                          : 'bg-slate-100 text-slate-700 border border-slate-200'
-                      }`}
-                    >
-                      {member.role}
-                    </span>
-                  </td>
+                    <td className="px-5 py-3.5">
+                      <Badge
+                        variant={
+                          member.role === 'OWNER'
+                            ? 'purple'
+                            : member.role === 'ADMIN'
+                            ? 'info'
+                            : 'default'
+                        }
+                        size="xs"
+                      >
+                        {member.role}
+                      </Badge>
+                    </td>
 
-                  <td className="px-6 py-4 text-xs text-slate-500">
-                    {new Date(member.createdAt).toLocaleDateString()}
-                  </td>
+                    <td className="px-5 py-3.5 text-slate-500 font-mono text-[11px]">
+                      {new Date(member.createdAt).toLocaleDateString(undefined, {
+                        year: 'numeric',
+                        month: 'short',
+                        day: 'numeric',
+                      })}
+                    </td>
 
-                  {isOwner && (
-                    <td className="px-6 py-4 text-right">
-                      {isTargetOwner ? (
-                        <div className="flex items-center justify-end gap-2">
+                    {isOwner && (
+                      <td className="px-5 py-3.5 text-right">
+                        {isTargetOwner ? (
                           <button
                             type="button"
                             onClick={onOpenTransferModal}
-                            className="text-xs font-semibold text-rose-600 hover:text-rose-800 transition-colors"
+                            className="text-[11px] font-semibold text-rose-600 hover:text-rose-700 hover:underline transition-colors"
                           >
                             Transfer Ownership
                           </button>
-                        </div>
-                      ) : (
-                        <div className="flex items-center justify-end gap-3">
-                          <select
-                            disabled={updatingUserId === member.userId}
-                            value={member.role}
-                            onChange={(e) =>
-                              handleRoleChange(member.userId, e.target.value as OrgRole)
-                            }
-                            className="text-xs border border-slate-300 rounded px-2 py-1 bg-white focus:outline-none focus:ring-1 focus:ring-blue-500"
-                          >
-                            <option value="MEMBER">Member</option>
-                            <option value="ADMIN">Admin</option>
-                          </select>
+                        ) : (
+                          <div className="flex items-center justify-end gap-2.5">
+                            <select
+                              disabled={updatingUserId === member.userId}
+                              value={member.role}
+                              onChange={(e) =>
+                                handleRoleChange(member.userId, e.target.value as OrgRole)
+                              }
+                              className="text-[11px] border border-slate-200 rounded-md px-2 py-1 bg-white text-slate-700 focus:outline-none focus:ring-1 focus:ring-blue-500 shadow-xs"
+                            >
+                              <option value="MEMBER">Member</option>
+                              <option value="ADMIN">Admin</option>
+                            </select>
 
-                          <button
-                            type="button"
-                            disabled={updatingUserId === member.userId}
-                            onClick={() => handleRemoveMember(member.userId, member.login)}
-                            className="text-xs text-rose-600 hover:text-rose-800 font-medium transition-colors"
-                          >
-                            Remove
-                          </button>
-                        </div>
-                      )}
-                    </td>
-                  )}
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="xs"
+                              disabled={updatingUserId === member.userId}
+                              onClick={() => handleRemoveMember(member.userId, member.login)}
+                              className="text-rose-600 hover:text-rose-700 hover:bg-rose-50"
+                            >
+                              Remove
+                            </Button>
+                          </div>
+                        )}
+                      </td>
+                    )}
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
       </div>
     </div>
   );

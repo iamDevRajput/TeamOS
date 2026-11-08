@@ -1,7 +1,9 @@
 'use client';
 
 import React, { useState } from 'react';
-import type { CreatedInvitationResponseDto, OrgRole } from '@teamos/contracts';
+import type { CreatedInvitationResponseDto } from '@teamos/contracts';
+import { Modal, Input, Select, Button, Badge } from './ui';
+import { CheckCircleIcon } from './ui/icons';
 
 interface InviteModalProps {
   isOpen: boolean;
@@ -24,8 +26,6 @@ export function InviteModal({
   const [error, setError] = useState<string | null>(null);
   const [createdInvite, setCreatedInvite] = useState<CreatedInvitationResponseDto | null>(null);
   const [copied, setCopied] = useState(false);
-
-  if (!isOpen) return null;
 
   async function handleCreateInvite(e: React.FormEvent) {
     e.preventDefault();
@@ -77,157 +77,89 @@ export function InviteModal({
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-sm p-4">
-      <div className="w-full max-w-md rounded-xl bg-white p-6 shadow-xl border border-slate-200">
-        <div className="flex items-center justify-between pb-4 border-b border-slate-100">
-          <h2 className="text-lg font-bold text-slate-900">
-            {createdInvite ? 'Invitation Created' : 'Invite Teammate'}
-          </h2>
-          <button
-            onClick={handleResetAndClose}
-            className="text-slate-400 hover:text-slate-600 transition-colors text-sm font-semibold p-1"
-          >
-            ✕
-          </button>
-        </div>
-
-        {createdInvite ? (
-          <div className="mt-4 space-y-4">
-            <div className="p-3 bg-emerald-50 border border-emerald-200 rounded-lg text-emerald-800 text-sm">
-              <p className="font-semibold">Shareable invitation link ready!</p>
-              <p className="text-xs text-emerald-600 mt-1">
-                Anyone with this link can join your organization as <strong>{createdInvite.invitation.role}</strong>. Link expires in 7 days.
-              </p>
+    <Modal
+      isOpen={isOpen}
+      onClose={handleResetAndClose}
+      title={createdInvite ? 'Invitation Created' : 'Invite Teammate'}
+      description="Invite team members to collaborate on tasks, dependencies, and delivery risk intelligence."
+      maxWidth="md"
+    >
+      {createdInvite ? (
+        <div className="space-y-4">
+          <div className="p-3.5 bg-emerald-50/80 border border-emerald-200/90 rounded-lg text-emerald-900 space-y-1">
+            <div className="flex items-center gap-1.5 font-bold text-xs text-emerald-800">
+              <CheckCircleIcon className="w-4 h-4 text-emerald-600" />
+              <span>Shareable Invitation Link Ready</span>
             </div>
+            <p className="text-[11px] text-emerald-700 leading-relaxed">
+              Anyone with this link can join this organization as a{' '}
+              <Badge variant={createdInvite.invitation.role === 'ADMIN' ? 'info' : 'default'} size="xs">
+                {createdInvite.invitation.role}
+              </Badge>
+              . Expires in 7 days.
+            </p>
+          </div>
 
-            <div>
-              <label className="block text-xs font-semibold uppercase text-slate-600 mb-1">
-                Shareable Link
-              </label>
-              <div className="flex items-center gap-2">
-                <input
-                  type="text"
-                  readOnly
-                  value={createdInvite.inviteUrl}
-                  className="w-full px-3 py-2 text-xs bg-slate-50 border border-slate-300 rounded-lg font-mono text-slate-700 select-all"
-                />
-                <button
-                  type="button"
-                  onClick={handleCopy}
-                  className="px-3 py-2 text-xs font-semibold text-white bg-slate-900 hover:bg-slate-800 rounded-lg whitespace-nowrap transition-colors"
-                >
-                  {copied ? '✓ Copied' : 'Copy'}
-                </button>
-              </div>
-            </div>
-
-            <div className="flex justify-end pt-4 border-t border-slate-100">
-              <button
-                type="button"
-                onClick={handleResetAndClose}
-                className="px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-100 rounded-lg transition-colors"
-              >
-                Done
-              </button>
+          <div className="space-y-1.5">
+            <label className="block text-xs font-semibold text-slate-700">
+              Invitation URL
+            </label>
+            <div className="flex items-center gap-2">
+              <input
+                type="text"
+                readOnly
+                value={createdInvite.inviteUrl}
+                className="w-full px-3 py-2 text-xs bg-slate-50 border border-slate-300 rounded-lg font-mono text-slate-800 select-all focus:outline-none"
+              />
+              <Button type="button" variant="primary" size="sm" onClick={handleCopy}>
+                {copied ? 'Copied' : 'Copy'}
+              </Button>
             </div>
           </div>
-        ) : (
-          <form onSubmit={handleCreateInvite} className="mt-4 space-y-4">
-            {error && (
-              <div className="p-3 text-xs text-rose-700 bg-rose-50 border border-rose-200 rounded-lg">
-                {error}
-              </div>
-            )}
 
-            <div>
-              <label className="block text-xs font-semibold uppercase text-slate-600 mb-1">
-                Role Assignment <span className="text-rose-500">*</span>
-              </label>
-              <div className="grid grid-cols-2 gap-3">
-                <label
-                  className={`flex flex-col p-3 border rounded-lg cursor-pointer transition-colors ${
-                    role === 'MEMBER'
-                      ? 'border-blue-600 bg-blue-50/50'
-                      : 'border-slate-200 hover:bg-slate-50'
-                  }`}
-                >
-                  <div className="flex items-center justify-between mb-1">
-                    <span className="text-sm font-semibold text-slate-900">Member</span>
-                    <input
-                      type="radio"
-                      name="role"
-                      value="MEMBER"
-                      checked={role === 'MEMBER'}
-                      onChange={() => setRole('MEMBER')}
-                      className="text-blue-600 focus:ring-blue-500"
-                    />
-                  </div>
-                  <span className="text-xs text-slate-500">
-                    Standard access: tasks, dependencies, and delivery risk reports.
-                  </span>
-                </label>
-
-                <label
-                  className={`flex flex-col p-3 border rounded-lg cursor-pointer transition-colors ${
-                    role === 'ADMIN'
-                      ? 'border-blue-600 bg-blue-50/50'
-                      : 'border-slate-200 hover:bg-slate-50'
-                  }`}
-                >
-                  <div className="flex items-center justify-between mb-1">
-                    <span className="text-sm font-semibold text-slate-900">Admin</span>
-                    <input
-                      type="radio"
-                      name="role"
-                      value="ADMIN"
-                      checked={role === 'ADMIN'}
-                      onChange={() => setRole('ADMIN')}
-                      className="text-blue-600 focus:ring-blue-500"
-                    />
-                  </div>
-                  <span className="text-xs text-slate-500">
-                    Can invite teammates, manage members, and configure repositories.
-                  </span>
-                </label>
-              </div>
+          <div className="pt-2 flex justify-end">
+            <Button type="button" variant="outline" onClick={handleResetAndClose}>
+              Done
+            </Button>
+          </div>
+        </div>
+      ) : (
+        <form onSubmit={handleCreateInvite} className="space-y-4">
+          {error && (
+            <div className="p-3 text-xs text-rose-700 bg-rose-50 border border-rose-200/80 rounded-lg">
+              {error}
             </div>
+          )}
 
-            <div>
-              <label className="block text-xs font-semibold uppercase text-slate-600 mb-1">
-                Recipient Email <span className="text-slate-400 font-normal lowercase">(optional reference)</span>
-              </label>
-              <input
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="colleague@example.com"
-                className="w-full px-3 py-2 text-sm border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-              />
-              <p className="text-xs text-slate-400 mt-1">
-                Stored for audit reference only. A shareable link will be generated.
-              </p>
-            </div>
+          <Select
+            label="Organization Role"
+            value={role}
+            onChange={(e) => setRole(e.target.value as 'MEMBER' | 'ADMIN')}
+            helperText="Admins can manage projects, members, and accept change proposals."
+          >
+            <option value="MEMBER">Member (Standard Contributor)</option>
+            <option value="ADMIN">Admin (Projects & Members Manager)</option>
+          </Select>
 
-            <div className="flex justify-end gap-3 pt-4 border-t border-slate-100">
-              <button
-                type="button"
-                onClick={handleResetAndClose}
-                disabled={loading}
-                className="px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-100 rounded-lg transition-colors"
-              >
-                Cancel
-              </button>
-              <button
-                type="submit"
-                disabled={loading}
-                className="px-4 py-2 text-sm font-semibold text-white bg-blue-600 hover:bg-blue-700 disabled:opacity-50 rounded-lg shadow-sm transition-colors"
-              >
-                {loading ? 'Generating...' : 'Generate Invite Link'}
-              </button>
-            </div>
-          </form>
-        )}
-      </div>
-    </div>
+          <Input
+            label="Restricted Recipient Email (Optional)"
+            type="email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            placeholder="colleague@company.com"
+            helperText="If provided, only the user matching this email can claim this invitation."
+          />
+
+          <div className="pt-3 flex items-center justify-end gap-2.5">
+            <Button type="button" variant="ghost" onClick={handleResetAndClose} disabled={loading}>
+              Cancel
+            </Button>
+            <Button type="submit" variant="primary" isLoading={loading}>
+              Generate Invitation
+            </Button>
+          </div>
+        </form>
+      )}
+    </Modal>
   );
 }

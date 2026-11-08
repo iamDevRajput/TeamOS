@@ -2,6 +2,8 @@
 
 import React, { useEffect, useState } from 'react';
 import type { ProjectReportDto } from '@teamos/contracts';
+import { Badge, Button, EmptyState } from './ui';
+import { FileTextIcon, ShieldIcon, CheckCircleIcon, PlusIcon } from './ui/icons';
 import { ReportDetailModal } from './report-detail-modal';
 
 interface ReportsPanelProps {
@@ -74,47 +76,36 @@ export function ReportsPanel({ orgId, projectId, apiBaseUrl }: ReportsPanelProps
     }
   }
 
-  const riskBadge = (risk: string) => {
-    switch (risk) {
-      case 'LOW':
-        return 'bg-emerald-50 text-emerald-700 border-emerald-200';
-      case 'MEDIUM':
-        return 'bg-amber-50 text-amber-700 border-amber-200';
-      case 'HIGH':
-        return 'bg-rose-50 text-rose-700 border-rose-200';
-      default:
-        return 'bg-slate-50 text-slate-700 border-slate-200';
-    }
-  };
-
   return (
     <div className="space-y-6">
       {/* Header Banner */}
-      <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+      <div className="bg-white p-5 rounded-xl border border-slate-200/90 shadow-xs flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div>
           <div className="flex items-center gap-2">
-            <h3 className="text-base font-bold text-slate-900">Evidence-Backed Health Reports</h3>
-            <span className="text-[11px] font-bold text-blue-700 bg-blue-50 border border-blue-200 px-2 py-0.5 rounded-full">
-              Phase I Ground Truth
-            </span>
+            <h3 className="text-sm font-bold text-slate-900 tracking-tight">Evidence-Backed Health Reports</h3>
+            <Badge variant="info" size="xs">
+              Verified Ground Truth
+            </Badge>
           </div>
-          <p className="text-xs text-slate-500 mt-1 max-w-xl">
+          <p className="text-xs text-slate-500 mt-0.5 max-w-xl">
             Authoritative delivery reports compiled from deterministic CPM graph calculations and immutable task snapshots. All claims cite verified entity citations.
           </p>
         </div>
 
-        <button
+        <Button
           type="button"
+          variant="primary"
+          size="sm"
           onClick={handleGenerateReport}
-          disabled={generating}
-          className="inline-flex items-center gap-2 px-4 py-2 text-xs font-semibold text-white bg-blue-600 hover:bg-blue-700 disabled:opacity-50 rounded-xl shadow-xs transition-colors whitespace-nowrap"
+          isLoading={generating}
+          leftIcon={<PlusIcon className="w-3.5 h-3.5" />}
         >
-          {generating ? 'Verifying & Generating…' : '+ Generate Health Report'}
-        </button>
+          {generating ? 'Verifying & Generating…' : 'Generate Health Report'}
+        </Button>
       </div>
 
       {error && (
-        <div className="p-3 text-xs text-rose-700 bg-rose-50 border border-rose-200 rounded-xl">
+        <div className="p-3 text-xs text-rose-700 bg-rose-50 border border-rose-200/80 rounded-xl">
           {error}
         </div>
       )}
@@ -122,54 +113,63 @@ export function ReportsPanel({ orgId, projectId, apiBaseUrl }: ReportsPanelProps
       {loading ? (
         <div className="p-12 text-center text-xs text-slate-400">Loading reports…</div>
       ) : reports.length === 0 ? (
-        <div className="p-12 text-center bg-white rounded-2xl border border-dashed border-slate-200 space-y-3">
-          <div className="text-3xl">📊</div>
-          <h4 className="text-base font-bold text-slate-900">No reports generated yet</h4>
-          <p className="text-xs text-slate-500 max-w-sm mx-auto">
-            Generate your first evidence-backed delivery health snapshot to track milestone delivery risk with zero hallucinations.
-          </p>
-          <button
-            type="button"
-            onClick={handleGenerateReport}
-            disabled={generating}
-            className="px-4 py-2 text-xs font-semibold text-white bg-blue-600 hover:bg-blue-700 disabled:opacity-50 rounded-xl shadow-xs transition-colors"
-          >
-            + Generate First Report
-          </button>
-        </div>
+        <EmptyState
+          icon={<FileTextIcon className="w-5 h-5" />}
+          title="No reports generated yet"
+          description="Generate your first evidence-backed delivery health snapshot to track milestone delivery risk with zero hallucinations."
+          action={
+            <Button
+              type="button"
+              variant="primary"
+              size="sm"
+              onClick={handleGenerateReport}
+              isLoading={generating}
+            >
+              Generate First Report
+            </Button>
+          }
+        />
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {reports.map((report) => (
             <div
               key={report.id}
               onClick={() => setSelectedReport(report)}
-              className="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs hover:border-blue-300 hover:shadow-md transition-all cursor-pointer flex flex-col justify-between"
+              className="bg-white p-5 rounded-xl border border-slate-200/90 shadow-xs hover:border-blue-500 hover:shadow-card-hover transition-all cursor-pointer flex flex-col justify-between group"
             >
-              <div>
-                <div className="flex items-center justify-between gap-2 mb-2">
-                  <span
-                    className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${riskBadge(
-                      report.deliveryRisk,
-                    )}`}
+              <div className="space-y-2">
+                <div className="flex items-center justify-between gap-2">
+                  <Badge
+                    variant={
+                      report.deliveryRisk === 'HIGH'
+                        ? 'danger'
+                        : report.deliveryRisk === 'MEDIUM'
+                        ? 'warning'
+                        : 'success'
+                    }
+                    size="xs"
+                    dot
                   >
                     {report.deliveryRisk} RISK
-                  </span>
+                  </Badge>
                   <span className="text-[11px] font-mono text-slate-400">
                     {new Date(report.createdAt).toLocaleDateString()}
                   </span>
                 </div>
 
-                <h4 className="text-sm font-bold text-slate-900 mb-1">{report.title}</h4>
+                <h4 className="text-sm font-bold text-slate-900 group-hover:text-blue-600 transition-colors">
+                  {report.title}
+                </h4>
                 <p className="text-xs text-slate-600 line-clamp-2 leading-relaxed">
                   {report.summary}
                 </p>
               </div>
 
               <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between text-[11px] text-slate-400">
-                <span className="font-mono bg-slate-50 px-2 py-0.5 rounded border border-slate-100">
+                <span className="font-mono bg-slate-50 px-2 py-0.5 rounded border border-slate-200/80 text-[10px]">
                   Hash: {report.snapshotHash.slice(0, 8)}…
                 </span>
-                <span className="text-blue-600 font-semibold group-hover:underline">
+                <span className="text-blue-600 font-semibold group-hover:translate-x-0.5 transition-transform">
                   View Full Report →
                 </span>
               </div>
@@ -187,4 +187,3 @@ export function ReportsPanel({ orgId, projectId, apiBaseUrl }: ReportsPanelProps
     </div>
   );
 }
-

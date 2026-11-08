@@ -22,6 +22,8 @@ TeamOS is designed from first principles as a modular monolith in a TypeScript m
 
 ## 2. Key Features
 
+- **Plane-Inspired 3-Panel Workspace:** A high-density SaaS interface featuring a compact global navigation rail, collapsible workspace & project sidebar, and main project workspace with segmented Work Items List and Kanban Board views.
+- **Global Search & Command Palette (`⌘K`):** Real-time keyboard-navigable search across tasks, projects, and administrative destinations.
 - **Multi-Tenant Organizations & RBAC:** Complete organizational workspaces isolated by PostgreSQL forced RLS. Role-Based Access Control (`OWNER`, `ADMIN`, `MEMBER`) with last-owner protection and secure invitation tokens.
 - **Project & Task Management:** Sequential per-project task numbering (`[KEY]-[NUM]`), status boards (Kanban & Table), assignees, remaining estimate tracking, and Optimistic Concurrency Control (OCC) using monotonic version checks (`HTTP 409 Conflict` on race conditions).
 - **Finish-to-Start Dependencies & DAG Visualizer:** Directed Acyclic Graph (DAG) task relationships. Multi-stage topological visualizer, visual `🔒 Blocked` badges, and cycle rejection before database insertion.
@@ -262,6 +264,7 @@ All configuration is managed through environment variables loaded via `.env` (te
 | `OAUTH_COOKIE_SECRET` | Cryptographic secret for signing OAuth cookie state | 32+ character random string |
 | `GITHUB_WEBHOOK_SECRET` | HMAC secret for verifying GitHub App webhooks | Required for live webhook ingestion |
 | `GEMINI_API_KEY` | Google Gemini API Key | Optional for local dev (uses Mock LLM provider if unset) |
+| `GEMINI_MODEL` | Google Gemini model identifier | Default: `gemini-3.5-flash` |
 | `AI_KILL_SWITCH` | Global kill switch to instantly disable all AI calls | `false` |
 
 ---
@@ -341,10 +344,11 @@ For full details, review [docs/TEAM_OS_AUTONOMOUS_QA_REPORT.md](docs/TEAM_OS_AUT
 
 ## 12. Screenshots
 
-*Screenshots from verified Playwright browser runs are preserved in local testing logs (`.playwright-cli/`):*
+*Visual artifacts from verified Playwright browser runs are preserved in `docs/screenshots/`:*
 
 | Screen | Description |
 |---|---|
+| **Plane-Inspired 3-Panel Workspace** | High-density 3-panel shell with dark global rail, workspace/project sidebar, and work items list (`docs/screenshots/stabilization_restored_workspace.png`). |
 | **Topological DAG Visualizer** | Multi-stage column layout showing finish-to-start constraints, visual `🔒 Blocked` badges, and active edge lists. |
 | **What-If Simulation Sandbox** | Split-pane interactive scenario modeling calculating hypothetical delivery delays in-memory with zero DB mutations. |
 | **Proposed Changes Diff Modal** | Exact visual diff review showing proposed task creations and dependency additions prior to administrative approval. |

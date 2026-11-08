@@ -189,6 +189,23 @@ export async function settleAiBudget(
       throw new Error(`Reservation ${reservationId} not found.`);
     }
 
+    if (existing.state === AiReservationState.SETTLED) {
+      return {
+        id: existing.id,
+        orgId: existing.orgId,
+        userId: existing.userId,
+        idempotencyKey: existing.idempotencyKey,
+        reservedAmountCents: existing.reservedAmountCents,
+        settledAmountCents: existing.settledAmountCents,
+        state: existing.state,
+        modelId: existing.modelId,
+        periodKey: existing.periodKey,
+        errorMessage: existing.errorMessage,
+        createdAt: existing.createdAt.toISOString(),
+        updatedAt: existing.updatedAt.toISOString(),
+      };
+    }
+
     if (
       existing.state !== AiReservationState.RESERVED &&
       existing.state !== AiReservationState.AWAITING_RECONCILIATION
@@ -267,6 +284,26 @@ export async function releaseAiBudget(
 
     if (!existing) {
       throw new Error(`Reservation ${reservationId} not found.`);
+    }
+
+    if (
+      existing.state === AiReservationState.RELEASED ||
+      existing.state === AiReservationState.SETTLED
+    ) {
+      return {
+        id: existing.id,
+        orgId: existing.orgId,
+        userId: existing.userId,
+        idempotencyKey: existing.idempotencyKey,
+        reservedAmountCents: existing.reservedAmountCents,
+        settledAmountCents: existing.settledAmountCents,
+        state: existing.state,
+        modelId: existing.modelId,
+        periodKey: existing.periodKey,
+        errorMessage: existing.errorMessage,
+        createdAt: existing.createdAt.toISOString(),
+        updatedAt: existing.updatedAt.toISOString(),
+      };
     }
 
     if (
