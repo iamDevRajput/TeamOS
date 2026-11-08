@@ -131,9 +131,9 @@ export function CreateProposalModal({
           placeholder="Objectives, technical context, expected timeline..."
         />
 
-        <div className="space-y-2 pt-2 border-t border-slate-100">
+        <div className="space-y-2 pt-2 border-t border-slate-100 dark:border-slate-800">
           <div className="flex items-center justify-between">
-            <label className="block text-xs font-bold text-slate-800 uppercase tracking-wider">
+            <label className="block text-xs font-bold text-slate-800 dark:text-slate-200 uppercase tracking-wider">
               Planned Tasks ({plannedTasks.length})
             </label>
             <Button
@@ -161,7 +161,7 @@ export function CreateProposalModal({
                     );
                   }}
                   placeholder={`Task ${idx + 1} title...`}
-                  className="flex-1 px-3 py-1.5 text-xs border border-slate-300 rounded-lg bg-white text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-600 shadow-xs"
+                  className="flex-1 px-3 py-1.5 text-xs border border-slate-300 dark:border-slate-700 rounded-lg bg-white dark:bg-slate-950 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-600 shadow-xs"
                 />
                 <input
                   type="number"
@@ -175,7 +175,7 @@ export function CreateProposalModal({
                     );
                   }}
                   placeholder="Days"
-                  className="w-16 px-2 py-1.5 text-xs border border-slate-300 rounded-lg text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-600 shadow-xs font-mono"
+                  className="w-16 px-2 py-1.5 text-xs border border-slate-300 dark:border-slate-700 rounded-lg bg-white dark:bg-slate-950 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-600 shadow-xs font-mono"
                 />
                 {plannedTasks.length > 1 && (
                   <button

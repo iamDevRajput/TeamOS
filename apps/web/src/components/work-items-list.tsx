@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useMemo } from 'react';
-import type { TaskDto, TaskStatus, OrgMemberDto } from '@teamos/contracts';
+import type { TaskDto, TaskStatus, TaskPriority, OrgMemberDto } from '@teamos/contracts';
 import {
   ListIcon,
   KanbanIcon,
@@ -24,7 +24,8 @@ import {
   CheckCircleIcon,
   XIcon,
 } from './ui/icons';
-import { Badge, Button, EmptyState } from './ui';
+import { Badge, Button, EmptyState, PriorityBadge } from './ui';
+import { TaskBoard } from './task-board';
 
 interface WorkItemsListProps {
   tasks: TaskDto[];
@@ -32,13 +33,15 @@ interface WorkItemsListProps {
   members: OrgMemberDto[];
   criticalPathTaskIds?: string[];
   dependencies?: { blockerTaskId: string; blockedTaskId: string }[];
+  currentUserId?: string;
   onSelectTask: (task: TaskDto) => void;
   onOpenCreateTask: (initialStatus?: TaskStatus) => void;
   onQuickStatusChange: (taskId: string, newStatus: TaskStatus, version: number) => void;
+  onInlineCreateTask?: (title: string, status: TaskStatus, priority: TaskPriority) => Promise<void>;
 }
 
 type ViewMode = 'list' | 'board';
-type SortField = 'number' | 'dueDate' | 'estimate' | 'status' | 'title';
+type SortField = 'number' | 'dueDate' | 'estimate' | 'status' | 'title' | 'priority';
 type GroupBy = 'status' | 'assignee' | 'none';
 
 interface DisplayOptions {
@@ -47,6 +50,7 @@ interface DisplayOptions {
   showDueDate: boolean;
   showBlockers: boolean;
   showCriticalPath: boolean;
+  showPriority: boolean;
 }
 
 export function WorkItemsList({
@@ -55,9 +59,11 @@ export function WorkItemsList({
   members,
   criticalPathTaskIds = [],
   dependencies = [],
+  currentUserId,
   onSelectTask,
   onOpenCreateTask,
   onQuickStatusChange,
+  onInlineCreateTask,
 }: WorkItemsListProps) {
   // 1. View & Search State
   const [viewMode, setViewMode] = useState<ViewMode>('list');
@@ -69,6 +75,7 @@ export function WorkItemsList({
   const [assigneeFilter, setAssigneeFilter] = useState<string>('ALL');
   const [blockedFilter, setBlockedFilter] = useState<'ALL' | 'BLOCKED' | 'UNBLOCKED'>('ALL');
   const [criticalFilter, setCriticalFilter] = useState<'ALL' | 'CRITICAL'>('ALL');
+  const [priorityFilter, setPriorityFilter] = useState<string>('ALL');
 
   // 3. Sort & Group State
   const [sortMenuOpen, setSortMenuOpen] = useState(false);
@@ -86,10 +93,35 @@ export function WorkItemsList({
     showDueDate: true,
     showBlockers: true,
     showCriticalPath: true,
+    showPriority: true,
   });
 
   // 5. Collapsible Group State
   const [collapsedGroups, setCollapsedGroups] = useState<Record<string, boolean>>({});
+
+  // 6. Inline Task Creation State
+  const [inlineCreatingStatus, setInlineCreatingStatus] = useState<TaskStatus | null>(null);
+  const [inlineTitle, setInlineTitle] = useState('');
+  const [inlinePriority, setInlinePriority] = useState<TaskPriority>('MEDIUM');
+  const [inlineSubmitting, setInlineSubmitting] = useState(false);
+
+  async function handleInlineSubmit(status: TaskStatus) {
+    if (!inlineTitle.trim() || inlineSubmitting) return;
+    if (!onInlineCreateTask) {
+      onOpenCreateTask(status);
+      return;
+    }
+    setInlineSubmitting(true);
+    try {
+      await onInlineCreateTask(inlineTitle.trim(), status, inlinePriority);
+      setInlineTitle('');
+      setInlineCreatingStatus(null);
+    } catch (err) {
+      console.error('Failed to create task inline', err);
+    } finally {
+      setInlineSubmitting(false);
+    }
+  }
 
   function toggleGroupCollapse(groupId: string) {
     setCollapsedGroups((prev) => ({
@@ -134,6 +166,11 @@ export function WorkItemsList({
         return false;
       }
 
+      // Priority filter
+      if (priorityFilter !== 'ALL' && task.priority !== priorityFilter) {
+        return false;
+      }
+
       // Assignee filter
       if (assigneeFilter === 'UNASSIGNED' && task.assigneeId) {
         return false;
@@ -161,6 +198,7 @@ export function WorkItemsList({
     tasks,
     search,
     statusFilter,
+    priorityFilter,
     assigneeFilter,
     blockedFilter,
     criticalFilter,
@@ -170,6 +208,13 @@ export function WorkItemsList({
 
   // Sort Tasks
   const sortedTasks = useMemo(() => {
+    const priorityWeights: Record<string, number> = {
+      URGENT: 4,
+      HIGH: 3,
+      MEDIUM: 2,
+      LOW: 1,
+    };
+
     return [...filteredTasks].sort((a, b) => {
       let comparison = 0;
       if (sortField === 'number') {
@@ -181,6 +226,10 @@ export function WorkItemsList({
           (a.remainingEstimateWorkdays ?? 999) - (b.remainingEstimateWorkdays ?? 999);
       } else if (sortField === 'status') {
         comparison = a.status.localeCompare(b.status);
+      } else if (sortField === 'priority') {
+        const weightA = priorityWeights[a.priority || 'MEDIUM'] || 2;
+        const weightB = priorityWeights[b.priority || 'MEDIUM'] || 2;
+        comparison = weightA - weightB;
       } else if (sortField === 'title') {
         comparison = a.title.localeCompare(b.title);
       }
@@ -191,6 +240,7 @@ export function WorkItemsList({
   // Active filter count
   const activeFilterCount =
     (statusFilter !== 'ALL' ? 1 : 0) +
+    (priorityFilter !== 'ALL' ? 1 : 0) +
     (assigneeFilter !== 'ALL' ? 1 : 0) +
     (blockedFilter !== 'ALL' ? 1 : 0) +
     (criticalFilter !== 'ALL' ? 1 : 0);
@@ -229,13 +279,13 @@ export function WorkItemsList({
   return (
     <div className="space-y-3">
       {/* 1. Header Toolbar (Plane style) */}
-      <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2.5 pb-2 border-b border-slate-200">
+      <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2.5 pb-2 border-b border-slate-200 dark:border-slate-800">
         {/* Left: Work items count */}
         <div className="flex items-center gap-2">
-          <h2 className="text-sm font-bold text-slate-900 tracking-tight">
+          <h2 className="text-sm font-bold text-slate-900 dark:text-slate-100 tracking-tight">
             Work items
           </h2>
-          <span className="font-mono text-xs font-semibold px-2 py-0.5 rounded-full bg-slate-100 text-slate-600 border border-slate-200/80">
+          <span className="font-mono text-xs font-semibold px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 border border-slate-200/80 dark:border-slate-700">
             {filteredTasks.length}
           </span>
         </div>
@@ -250,19 +300,19 @@ export function WorkItemsList({
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Search work items..."
-              className="w-full pl-8 pr-3 py-1 text-xs bg-slate-50 border border-slate-200 rounded-lg text-slate-800 placeholder:text-slate-400 focus:bg-white focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+              className="w-full pl-8 pr-3 py-1 text-xs bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-800 dark:text-slate-100 placeholder:text-slate-400 focus:bg-white dark:focus:bg-slate-900 focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 transition-colors"
             />
           </div>
 
           {/* View Mode Toggle: List | Board */}
-          <div className="flex items-center rounded-lg border border-slate-200 bg-slate-100/80 p-0.5">
+          <div className="flex items-center rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-100/80 dark:bg-slate-800 p-0.5">
             <button
               type="button"
               onClick={() => setViewMode('list')}
               className={`flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-semibold transition-all ${
                 viewMode === 'list'
-                  ? 'bg-white text-blue-600 shadow-xs'
-                  : 'text-slate-600 hover:text-slate-900'
+                  ? 'bg-white dark:bg-slate-900 text-blue-600 dark:text-sky-400 shadow-xs'
+                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
               }`}
               title="List view"
             >
@@ -274,8 +324,8 @@ export function WorkItemsList({
               onClick={() => setViewMode('board')}
               className={`flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-semibold transition-all ${
                 viewMode === 'board'
-                  ? 'bg-white text-blue-600 shadow-xs'
-                  : 'text-slate-600 hover:text-slate-900'
+                  ? 'bg-white dark:bg-slate-900 text-blue-600 dark:text-sky-400 shadow-xs'
+                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
               }`}
               title="Board view"
             >
@@ -291,8 +341,8 @@ export function WorkItemsList({
               onClick={() => setFilterMenuOpen(!filterMenuOpen)}
               className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg border text-xs font-medium transition-colors ${
                 activeFilterCount > 0
-                  ? 'bg-blue-50 border-blue-200 text-blue-700 font-semibold'
-                  : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-50'
+                  ? 'bg-blue-50 dark:bg-blue-950/40 border-blue-200 dark:border-blue-800 text-blue-700 dark:text-blue-300 font-semibold'
+                  : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700'
               }`}
               title="Filter tasks"
             >
@@ -311,9 +361,9 @@ export function WorkItemsList({
                   className="fixed inset-0 z-40"
                   onClick={() => setFilterMenuOpen(false)}
                 />
-                <div className="absolute right-0 top-full mt-1.5 w-64 bg-white border border-slate-200 rounded-xl shadow-dropdown z-50 p-3 space-y-3">
-                  <div className="flex items-center justify-between pb-1 border-b border-slate-100">
-                    <span className="text-xs font-bold text-slate-900">Filters</span>
+                <div className="absolute right-0 top-full mt-1.5 w-64 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl shadow-dropdown z-50 p-3 space-y-3">
+                  <div className="flex items-center justify-between pb-1 border-b border-slate-100 dark:border-slate-800">
+                    <span className="text-xs font-bold text-slate-900 dark:text-slate-100">Filters</span>
                     {activeFilterCount > 0 && (
                       <button
                         type="button"
@@ -323,7 +373,7 @@ export function WorkItemsList({
                           setBlockedFilter('ALL');
                           setCriticalFilter('ALL');
                         }}
-                        className="text-[11px] text-blue-600 hover:underline"
+                        className="text-[11px] text-blue-600 dark:text-blue-400 hover:underline"
                       >
                         Reset all
                       </button>
@@ -338,13 +388,31 @@ export function WorkItemsList({
                     <select
                       value={statusFilter}
                       onChange={(e) => setStatusFilter(e.target.value)}
-                      className="w-full text-xs p-1.5 bg-slate-50 border border-slate-200 rounded-lg text-slate-800 focus:outline-none"
+                      className="w-full text-xs p-1.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-800 dark:text-slate-200 focus:outline-none"
                     >
                       <option value="ALL">All Statuses</option>
                       <option value="TODO">To Do</option>
                       <option value="IN_PROGRESS">In Progress</option>
                       <option value="DONE">Done</option>
                       <option value="CANCELLED">Cancelled</option>
+                    </select>
+                  </div>
+
+                  {/* Filter by Priority */}
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                      Priority
+                    </label>
+                    <select
+                      value={priorityFilter}
+                      onChange={(e) => setPriorityFilter(e.target.value)}
+                      className="w-full text-xs p-1.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-800 dark:text-slate-200 focus:outline-none"
+                    >
+                      <option value="ALL">All Priorities</option>
+                      <option value="URGENT">Urgent</option>
+                      <option value="HIGH">High</option>
+                      <option value="MEDIUM">Medium</option>
+                      <option value="LOW">Low</option>
                     </select>
                   </div>
 
@@ -356,7 +424,7 @@ export function WorkItemsList({
                     <select
                       value={assigneeFilter}
                       onChange={(e) => setAssigneeFilter(e.target.value)}
-                      className="w-full text-xs p-1.5 bg-slate-50 border border-slate-200 rounded-lg text-slate-800 focus:outline-none"
+                      className="w-full text-xs p-1.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-800 dark:text-slate-200 focus:outline-none"
                     >
                       <option value="ALL">All Assignees</option>
                       <option value="UNASSIGNED">Unassigned</option>
@@ -376,7 +444,7 @@ export function WorkItemsList({
                     <select
                       value={blockedFilter}
                       onChange={(e) => setBlockedFilter(e.target.value as any)}
-                      className="w-full text-xs p-1.5 bg-slate-50 border border-slate-200 rounded-lg text-slate-800 focus:outline-none"
+                      className="w-full text-xs p-1.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-800 dark:text-slate-200 focus:outline-none"
                     >
                       <option value="ALL">All Tasks</option>
                       <option value="BLOCKED">Blocked Only (Unmet Dependencies)</option>
@@ -392,7 +460,7 @@ export function WorkItemsList({
                     <select
                       value={criticalFilter}
                       onChange={(e) => setCriticalFilter(e.target.value as any)}
-                      className="w-full text-xs p-1.5 bg-slate-50 border border-slate-200 rounded-lg text-slate-800 focus:outline-none"
+                      className="w-full text-xs p-1.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-800 dark:text-slate-200 focus:outline-none"
                     >
                       <option value="ALL">All Tasks</option>
                       <option value="CRITICAL">Critical Path Tasks Only</option>
@@ -408,7 +476,7 @@ export function WorkItemsList({
             <button
               type="button"
               onClick={() => setSortMenuOpen(!sortMenuOpen)}
-              className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg border border-slate-200 bg-white text-slate-700 hover:bg-slate-50 font-medium transition-colors"
+              className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 font-medium transition-colors"
               title="Sort tasks"
             >
               <SortAscIcon className="w-3.5 h-3.5" />
@@ -421,12 +489,13 @@ export function WorkItemsList({
                   className="fixed inset-0 z-40"
                   onClick={() => setSortMenuOpen(false)}
                 />
-                <div className="absolute right-0 top-full mt-1.5 w-48 bg-white border border-slate-200 rounded-xl shadow-dropdown z-50 p-2 space-y-1">
+                <div className="absolute right-0 top-full mt-1.5 w-48 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl shadow-dropdown z-50 p-2 space-y-1">
                   <div className="px-2 py-1 text-[10px] font-bold uppercase tracking-wider text-slate-400">
                     Sort by
                   </div>
                   {[
                     { id: 'number', label: 'Task Number' },
+                    { id: 'priority', label: 'Priority' },
                     { id: 'dueDate', label: 'Due Date' },
                     { id: 'estimate', label: 'Remaining Workdays' },
                     { id: 'status', label: 'Status' },
@@ -446,13 +515,13 @@ export function WorkItemsList({
                       }}
                       className={`w-full flex items-center justify-between px-2.5 py-1.5 text-xs rounded-lg text-left transition-colors ${
                         sortField === s.id
-                          ? 'bg-blue-50 text-blue-700 font-bold'
-                          : 'text-slate-700 hover:bg-slate-50'
+                          ? 'bg-blue-50 dark:bg-blue-950/40 text-blue-700 dark:text-blue-300 font-bold'
+                          : 'text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800'
                       }`}
                     >
                       <span>{s.label}</span>
                       {sortField === s.id && (
-                        <span className="text-[10px] font-mono text-blue-600">
+                        <span className="text-[10px] font-mono text-blue-600 dark:text-blue-400">
                           {sortAsc ? 'ASC' : 'DESC'}
                         </span>
                       )}
@@ -468,7 +537,7 @@ export function WorkItemsList({
             <button
               type="button"
               onClick={() => setGroupMenuOpen(!groupMenuOpen)}
-              className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg border border-slate-200 bg-white text-slate-700 hover:bg-slate-50 font-medium transition-colors"
+              className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 font-medium transition-colors"
               title="Group tasks"
             >
               <LayersIcon className="w-3.5 h-3.5" />
@@ -481,7 +550,7 @@ export function WorkItemsList({
                   className="fixed inset-0 z-40"
                   onClick={() => setGroupMenuOpen(false)}
                 />
-                <div className="absolute right-0 top-full mt-1.5 w-44 bg-white border border-slate-200 rounded-xl shadow-dropdown z-50 p-2 space-y-1">
+                <div className="absolute right-0 top-full mt-1.5 w-44 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl shadow-dropdown z-50 p-2 space-y-1">
                   <div className="px-2 py-1 text-[10px] font-bold uppercase tracking-wider text-slate-400">
                     Group by
                   </div>
@@ -499,12 +568,12 @@ export function WorkItemsList({
                       }}
                       className={`w-full flex items-center justify-between px-2.5 py-1.5 text-xs rounded-lg text-left transition-colors ${
                         groupBy === g.id
-                          ? 'bg-blue-50 text-blue-700 font-bold'
-                          : 'text-slate-700 hover:bg-slate-50'
+                          ? 'bg-blue-50 dark:bg-blue-950/40 text-blue-700 dark:text-blue-300 font-bold'
+                          : 'text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800'
                       }`}
                     >
                       <span>{g.label}</span>
-                      {groupBy === g.id && <CheckIcon className="w-3.5 h-3.5 text-blue-600" />}
+                      {groupBy === g.id && <CheckIcon className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />}
                     </button>
                   ))}
                 </div>
@@ -535,6 +604,7 @@ export function WorkItemsList({
                   </div>
                   {[
                     { key: 'showAssignee', label: 'Assignee' },
+                    { key: 'showPriority', label: 'Priority' },
                     { key: 'showEstimate', label: 'Estimate' },
                     { key: 'showDueDate', label: 'Due Date' },
                     { key: 'showBlockers', label: 'Blockers' },
@@ -574,6 +644,73 @@ export function WorkItemsList({
             <span>Add work item</span>
           </Button>
         </div>
+      </div>
+
+      {/* Quick Saved Views / Presets Bar */}
+      <div className="flex items-center gap-1.5 overflow-x-auto pb-1 text-xs">
+        <button
+          type="button"
+          onClick={() => {
+            setStatusFilter('ALL');
+            setAssigneeFilter('ALL');
+            setBlockedFilter('ALL');
+            setCriticalFilter('ALL');
+            setPriorityFilter('ALL');
+          }}
+          className={`px-2.5 py-1 rounded-lg border font-medium transition-all ${
+            activeFilterCount === 0
+              ? 'bg-blue-50 dark:bg-blue-950/40 border-blue-200 dark:border-blue-800 text-blue-700 dark:text-blue-300 font-bold'
+              : 'border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800'
+          }`}
+        >
+          All Items ({tasks.length})
+        </button>
+
+        <button
+          type="button"
+          onClick={() => {
+            setCriticalFilter(criticalFilter === 'CRITICAL' ? 'ALL' : 'CRITICAL');
+          }}
+          className={`px-2.5 py-1 rounded-lg border font-medium flex items-center gap-1 transition-all ${
+            criticalFilter === 'CRITICAL'
+              ? 'bg-rose-50 dark:bg-rose-950/40 border-rose-300 dark:border-rose-800 text-rose-700 dark:text-rose-300 font-bold'
+              : 'border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800'
+          }`}
+        >
+          <FlameIcon className="w-3 h-3 text-rose-500" />
+          <span>Critical Path Only ({criticalPathTaskIds.length})</span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => {
+            setBlockedFilter(blockedFilter === 'BLOCKED' ? 'ALL' : 'BLOCKED');
+          }}
+          className={`px-2.5 py-1 rounded-lg border font-medium flex items-center gap-1 transition-all ${
+            blockedFilter === 'BLOCKED'
+              ? 'bg-amber-50 dark:bg-amber-950/40 border-amber-300 dark:border-amber-800 text-amber-700 dark:text-amber-300 font-bold'
+              : 'border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800'
+          }`}
+        >
+          <LockIcon className="w-3 h-3 text-amber-500" />
+          <span>Blocked Tasks ({blockedTaskIdsSet.size})</span>
+        </button>
+
+        {currentUserId && (
+          <button
+            type="button"
+            onClick={() => {
+              setAssigneeFilter(assigneeFilter === currentUserId ? 'ALL' : currentUserId);
+            }}
+            className={`px-2.5 py-1 rounded-lg border font-medium flex items-center gap-1 transition-all ${
+              assigneeFilter === currentUserId
+                ? 'bg-sky-50 dark:bg-sky-950/40 border-sky-300 dark:border-sky-800 text-sky-700 dark:text-sky-300 font-bold'
+                : 'border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800'
+            }`}
+          >
+            <span>My Tasks</span>
+          </button>
+        )}
       </div>
 
       {/* 2. Main Work Items Content (List or Board) */}
@@ -616,13 +753,13 @@ export function WorkItemsList({
               }
 
               return (
-                <div key={group.status} className="border border-slate-200/90 rounded-xl bg-white overflow-hidden shadow-xs">
+                <div key={group.status} className="border border-slate-200/90 dark:border-slate-800 rounded-xl bg-white dark:bg-slate-900 overflow-hidden shadow-xs">
                   {/* Group Header */}
-                  <div className="flex items-center justify-between px-3 py-2 bg-slate-50/70 border-b border-slate-200/70">
+                  <div className="flex items-center justify-between px-3 py-2 bg-slate-50/70 dark:bg-slate-800/60 border-b border-slate-200/70 dark:border-slate-800">
                     <button
                       type="button"
                       onClick={() => toggleGroupCollapse(group.status)}
-                      className="flex items-center gap-2 text-xs font-bold text-slate-800 hover:text-slate-900"
+                      className="flex items-center gap-2 text-xs font-bold text-slate-800 dark:text-slate-200 hover:text-slate-900 dark:hover:text-slate-100"
                     >
                       {isCollapsed ? (
                         <ChevronRightIcon className="w-3.5 h-3.5 text-slate-400" />
@@ -633,7 +770,7 @@ export function WorkItemsList({
                         {group.icon}
                         <span>{group.label}</span>
                       </span>
-                      <span className="font-mono text-[11px] font-semibold text-slate-400 bg-white px-2 py-0.2 rounded-full border border-slate-200">
+                      <span className="font-mono text-[11px] font-semibold text-slate-400 bg-white dark:bg-slate-800 px-2 py-0.2 rounded-full border border-slate-200 dark:border-slate-700">
                         {groupTasks.length}
                       </span>
                     </button>
@@ -641,7 +778,7 @@ export function WorkItemsList({
                     <button
                       type="button"
                       onClick={() => onOpenCreateTask(group.status)}
-                      className="p-1 rounded text-slate-400 hover:text-blue-600 hover:bg-slate-200/70 transition-colors"
+                      className="p-1 rounded text-slate-400 hover:text-blue-600 dark:hover:text-sky-400 hover:bg-slate-200/70 dark:hover:bg-slate-800 transition-colors"
                       title={`Add task in ${group.label}`}
                     >
                       <PlusIcon className="w-3.5 h-3.5" />
@@ -650,7 +787,7 @@ export function WorkItemsList({
 
                   {/* Group Tasks Rows */}
                   {!isCollapsed && (
-                    <div className="divide-y divide-slate-100">
+                    <div className="divide-y divide-slate-100 dark:divide-slate-800">
                       {groupTasks.length === 0 ? (
                         <div className="px-4 py-3 text-xs text-slate-400 italic">
                           No tasks in {group.label}
@@ -664,7 +801,7 @@ export function WorkItemsList({
                             <div
                               key={task.id}
                               onClick={() => onSelectTask(task)}
-                              className="group flex items-center justify-between px-3 py-2 text-xs hover:bg-slate-50/80 transition-colors cursor-pointer gap-2"
+                              className="group flex items-center justify-between px-3 py-2 text-xs hover:bg-slate-50/80 dark:hover:bg-slate-800/50 transition-colors cursor-pointer gap-2"
                             >
                               {/* Left: Status Icon, Task Key, Title */}
                               <div className="flex items-center gap-2.5 min-w-0 flex-1">
@@ -678,42 +815,46 @@ export function WorkItemsList({
                                       task.version,
                                     );
                                   }}
-                                  className="p-1 rounded hover:bg-slate-200/60 transition-colors shrink-0"
+                                  className="p-1 rounded hover:bg-slate-200/60 dark:hover:bg-slate-800 transition-colors shrink-0"
                                   title={`Status: ${task.status}. Click to advance.`}
                                 >
                                   {renderStatusIcon(task.status)}
                                 </button>
 
-                                <span className="font-mono text-[11px] font-bold text-slate-500 bg-slate-100 px-1.5 py-0.5 rounded border border-slate-200 shrink-0">
+                                <span className="font-mono text-[11px] font-bold text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-slate-800/80 px-1.5 py-0.5 rounded border border-slate-200 dark:border-slate-700 shrink-0">
                                   {projectKey}-{task.number}
                                 </span>
 
-                                <span className="font-medium text-slate-900 group-hover:text-blue-600 truncate transition-colors">
+                                {displayOptions.showPriority && (
+                                  <PriorityBadge priority={task.priority} size="xs" />
+                                )}
+
+                                <span className="font-medium text-slate-900 dark:text-slate-100 group-hover:text-blue-600 dark:group-hover:text-sky-400 truncate transition-colors">
                                   {task.title}
                                 </span>
 
                                 {/* Badges: Blocked & Critical Path */}
                                 {displayOptions.showBlockers && isBlocked && (
-                                  <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-semibold bg-amber-50 text-amber-700 border border-amber-200 shrink-0">
-                                    <LockIcon className="w-2.5 h-2.5 text-amber-600" />
+                                  <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-semibold bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-800 shrink-0">
+                                    <LockIcon className="w-2.5 h-2.5 text-amber-600 dark:text-amber-400" />
                                     <span>Blocked</span>
                                   </span>
                                 )}
 
                                 {displayOptions.showCriticalPath && isCritical && (
-                                  <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-semibold bg-rose-50 text-rose-700 border border-rose-200 shrink-0">
-                                    <FlameIcon className="w-2.5 h-2.5 text-rose-600" />
+                                  <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-semibold bg-rose-50 dark:bg-rose-950/40 text-rose-700 dark:text-rose-300 border border-rose-200 dark:border-rose-800 shrink-0">
+                                    <FlameIcon className="w-2.5 h-2.5 text-rose-600 dark:text-rose-400" />
                                     <span>Critical Path</span>
                                   </span>
                                 )}
                               </div>
 
                               {/* Right: Assignee, Estimate, Due Date */}
-                              <div className="flex items-center gap-3 shrink-0 text-[11px] text-slate-500">
+                              <div className="flex items-center gap-3 shrink-0 text-[11px] text-slate-500 dark:text-slate-400">
                                 {displayOptions.showAssignee && (
                                   <div className="flex items-center gap-1.5 min-w-[90px] justify-end">
                                     {task.assigneeName ? (
-                                      <span className="truncate max-w-[80px] font-medium text-slate-700">
+                                      <span className="truncate max-w-[80px] font-medium text-slate-700 dark:text-slate-300">
                                         @{task.assigneeName}
                                       </span>
                                     ) : (
@@ -723,27 +864,27 @@ export function WorkItemsList({
                                 )}
 
                                 {displayOptions.showEstimate && (
-                                  <div className="min-w-[40px] text-right font-mono text-slate-700">
+                                  <div className="min-w-[40px] text-right font-mono text-slate-700 dark:text-slate-300">
                                     {task.remainingEstimateWorkdays !== undefined ? (
                                       <span className="flex items-center gap-0.5 justify-end">
                                         <ClockIcon className="w-3 h-3 text-slate-400" />
                                         <span>{task.remainingEstimateWorkdays}d</span>
                                       </span>
                                     ) : (
-                                      <span className="text-slate-300">—</span>
+                                      <span className="text-slate-300 dark:text-slate-700">—</span>
                                     )}
                                   </div>
                                 )}
 
                                 {displayOptions.showDueDate && (
-                                  <div className="min-w-[85px] text-right font-mono text-slate-500">
+                                  <div className="min-w-[85px] text-right font-mono text-slate-500 dark:text-slate-400">
                                     {task.dueDate ? (
                                       <span className="flex items-center gap-1 justify-end">
                                         <CalendarIcon className="w-3 h-3 text-slate-400" />
                                         <span>{task.dueDate}</span>
                                       </span>
                                     ) : (
-                                      <span className="text-slate-300">—</span>
+                                      <span className="text-slate-300 dark:text-slate-700">—</span>
                                     )}
                                   </div>
                                 )}
@@ -754,6 +895,74 @@ export function WorkItemsList({
                           );
                         })
                       )}
+
+                      {/* Inline Task Creation Row (Linear/Plane inspired quick entry) */}
+                      {inlineCreatingStatus === group.status ? (
+                        <div className="p-2.5 bg-slate-50/90 dark:bg-slate-800/60 border-t border-slate-200/80 dark:border-slate-700/80 flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
+                          <input
+                            type="text"
+                            autoFocus
+                            placeholder={`New item for ${group.label}... (Press Enter to save, Esc to cancel)`}
+                            value={inlineTitle}
+                            onChange={(e) => setInlineTitle(e.target.value)}
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter') {
+                                e.preventDefault();
+                                handleInlineSubmit(group.status);
+                              } else if (e.key === 'Escape') {
+                                e.preventDefault();
+                                setInlineCreatingStatus(null);
+                                setInlineTitle('');
+                              }
+                            }}
+                            className="flex-1 px-2.5 py-1.5 text-xs bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-900 dark:text-slate-100 placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                          />
+                          <div className="flex items-center gap-1.5 justify-end">
+                            <select
+                              value={inlinePriority}
+                              onChange={(e) => setInlinePriority(e.target.value as TaskPriority)}
+                              className="text-xs px-2 py-1 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-800 dark:text-slate-200 focus:outline-none"
+                            >
+                              <option value="URGENT">🔴 Urgent</option>
+                              <option value="HIGH">🟠 High</option>
+                              <option value="MEDIUM">🟡 Medium</option>
+                              <option value="LOW">🔵 Low</option>
+                            </select>
+                            <Button
+                              type="button"
+                              variant="primary"
+                              size="sm"
+                              disabled={!inlineTitle.trim() || inlineSubmitting}
+                              onClick={() => handleInlineSubmit(group.status)}
+                            >
+                              {inlineSubmitting ? 'Saving...' : 'Add'}
+                            </Button>
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => {
+                                setInlineCreatingStatus(null);
+                                setInlineTitle('');
+                              }}
+                            >
+                              Cancel
+                            </Button>
+                          </div>
+                        </div>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setInlineCreatingStatus(group.status);
+                            setInlineTitle('');
+                          }}
+                          className="w-full text-left px-3 py-2 text-xs text-slate-400 hover:text-blue-600 dark:hover:text-sky-400 hover:bg-slate-50/60 dark:hover:bg-slate-800/40 flex items-center gap-1.5 border-t border-dashed border-slate-200/60 dark:border-slate-800/60 transition-colors"
+                        >
+                          <PlusIcon className="w-3.5 h-3.5" />
+                          <span>Add work item to {group.label}...</span>
+                        </button>
+                      )}
                     </div>
                   )}
                 </div>
@@ -761,7 +970,7 @@ export function WorkItemsList({
             })
           ) : (
             /* Flat or Assignee List */
-            <div className="border border-slate-200/90 rounded-xl bg-white overflow-hidden shadow-xs divide-y divide-slate-100">
+            <div className="border border-slate-200/90 dark:border-slate-800 rounded-xl bg-white dark:bg-slate-900 overflow-hidden shadow-xs divide-y divide-slate-100 dark:divide-slate-800">
               {sortedTasks.map((task) => {
                 const isBlocked = blockedTaskIdsSet.has(task.id);
                 const isCritical = criticalPathSet.has(task.id);
@@ -770,7 +979,7 @@ export function WorkItemsList({
                   <div
                     key={task.id}
                     onClick={() => onSelectTask(task)}
-                    className="group flex items-center justify-between px-3 py-2 text-xs hover:bg-slate-50/80 transition-colors cursor-pointer gap-2"
+                    className="group flex items-center justify-between px-3 py-2 text-xs hover:bg-slate-50/80 dark:hover:bg-slate-800/50 transition-colors cursor-pointer gap-2"
                   >
                     <div className="flex items-center gap-2.5 min-w-0 flex-1">
                       <button
@@ -783,39 +992,43 @@ export function WorkItemsList({
                             task.version,
                           );
                         }}
-                        className="p-1 rounded hover:bg-slate-200/60 transition-colors shrink-0"
+                        className="p-1 rounded hover:bg-slate-200/60 dark:hover:bg-slate-800 transition-colors shrink-0"
                       >
                         {renderStatusIcon(task.status)}
                       </button>
 
-                      <span className="font-mono text-[11px] font-bold text-slate-500 bg-slate-100 px-1.5 py-0.5 rounded border border-slate-200 shrink-0">
+                      <span className="font-mono text-[11px] font-bold text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-slate-800 px-1.5 py-0.5 rounded border border-slate-200 dark:border-slate-700 shrink-0">
                         {projectKey}-{task.number}
                       </span>
 
-                      <span className="font-medium text-slate-900 group-hover:text-blue-600 truncate transition-colors">
+                      {displayOptions.showPriority && (
+                        <PriorityBadge priority={task.priority} size="xs" />
+                      )}
+
+                      <span className="font-medium text-slate-900 dark:text-slate-100 group-hover:text-blue-600 dark:group-hover:text-sky-400 truncate transition-colors">
                         {task.title}
                       </span>
 
                       {isBlocked && (
-                        <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-semibold bg-amber-50 text-amber-700 border border-amber-200 shrink-0">
-                          <LockIcon className="w-2.5 h-2.5 text-amber-600" />
+                        <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-semibold bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-800 shrink-0">
+                          <LockIcon className="w-2.5 h-2.5 text-amber-600 dark:text-amber-400" />
                           <span>Blocked</span>
                         </span>
                       )}
 
                       {isCritical && (
-                        <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-semibold bg-rose-50 text-rose-700 border border-rose-200 shrink-0">
-                          <FlameIcon className="w-2.5 h-2.5 text-rose-600" />
+                        <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-semibold bg-rose-50 dark:bg-rose-950/40 text-rose-700 dark:text-rose-300 border border-rose-200 dark:border-rose-800 shrink-0">
+                          <FlameIcon className="w-2.5 h-2.5 text-rose-600 dark:text-rose-400" />
                           <span>Critical Path</span>
                         </span>
                       )}
                     </div>
 
-                    <div className="flex items-center gap-3 shrink-0 text-[11px] text-slate-500">
-                      <span className="text-slate-600 truncate max-w-[80px]">
+                    <div className="flex items-center gap-3 shrink-0 text-[11px] text-slate-500 dark:text-slate-400">
+                      <span className="text-slate-600 dark:text-slate-300 truncate max-w-[80px]">
                         {task.assigneeName ? `@${task.assigneeName}` : 'Unassigned'}
                       </span>
-                      <span className="font-mono text-slate-700">
+                      <span className="font-mono text-slate-700 dark:text-slate-300">
                         {task.remainingEstimateWorkdays !== undefined ? `${task.remainingEstimateWorkdays}d` : '—'}
                       </span>
                       <span className="font-mono text-slate-400">
@@ -829,87 +1042,14 @@ export function WorkItemsList({
           )}
         </div>
       ) : (
-        /* Board View (Kanban) */
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-3.5">
-          {[
-            { id: 'TODO' as TaskStatus, label: 'To Do', color: 'bg-slate-400' },
-            { id: 'IN_PROGRESS' as TaskStatus, label: 'In Progress', color: 'bg-amber-500' },
-            { id: 'DONE' as TaskStatus, label: 'Done', color: 'bg-emerald-500' },
-            { id: 'CANCELLED' as TaskStatus, label: 'Cancelled', color: 'bg-rose-400' },
-          ].map((col) => {
-            const colTasks = sortedTasks.filter((t) => t.status === col.id);
-
-            return (
-              <div
-                key={col.id}
-                className="bg-slate-50/80 rounded-xl p-3 border border-slate-200 flex flex-col min-h-[460px]"
-              >
-                {/* Column Header */}
-                <div className="flex items-center justify-between pb-2 mb-2 border-b border-slate-200/80">
-                  <div className="flex items-center gap-2">
-                    <span className={`w-2 h-2 rounded-full ${col.color}`} />
-                    <span className="text-xs font-bold text-slate-800">
-                      {col.label}
-                    </span>
-                  </div>
-                  <span className="font-mono text-[11px] font-bold text-slate-400 bg-white px-2 py-0.2 rounded-full border border-slate-200">
-                    {colTasks.length}
-                  </span>
-                </div>
-
-                {/* Column Task Cards */}
-                <div className="space-y-2 flex-1 overflow-y-auto">
-                  {colTasks.map((task) => {
-                    const isBlocked = blockedTaskIdsSet.has(task.id);
-                    const isCritical = criticalPathSet.has(task.id);
-
-                    return (
-                      <div
-                        key={task.id}
-                        onClick={() => onSelectTask(task)}
-                        className="bg-white p-3 rounded-lg border border-slate-200 shadow-xs hover:border-blue-500 hover:shadow-card transition-all cursor-pointer space-y-2 group"
-                      >
-                        <div className="flex items-center justify-between gap-1">
-                          <span className="font-mono text-[10px] font-bold text-slate-500 bg-slate-100 px-1.5 py-0.5 rounded border border-slate-200">
-                            {projectKey}-{task.number}
-                          </span>
-                          <div className="flex items-center gap-1">
-                            {isBlocked && (
-                              <span className="p-0.5 rounded bg-amber-50 text-amber-600 border border-amber-200" title="Blocked">
-                                <LockIcon className="w-3 h-3" />
-                              </span>
-                            )}
-                            {isCritical && (
-                              <span className="p-0.5 rounded bg-rose-50 text-rose-600 border border-rose-200" title="Critical Path">
-                                <FlameIcon className="w-3 h-3" />
-                              </span>
-                            )}
-                          </div>
-                        </div>
-
-                        <h4 className="text-xs font-semibold text-slate-900 group-hover:text-blue-600 line-clamp-2 leading-relaxed transition-colors">
-                          {task.title}
-                        </h4>
-
-                        <div className="flex items-center justify-between pt-1.5 border-t border-slate-100 text-[10px] text-slate-400">
-                          <span className="truncate max-w-[90px] text-slate-600 font-medium">
-                            {task.assigneeName ? `@${task.assigneeName}` : 'Unassigned'}
-                          </span>
-                          {task.remainingEstimateWorkdays !== undefined && (
-                            <span className="font-mono text-slate-500 flex items-center gap-0.5">
-                              <ClockIcon className="w-3 h-3 text-slate-400" />
-                              <span>{task.remainingEstimateWorkdays}d</span>
-                            </span>
-                          )}
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-            );
-          })}
-        </div>
+        /* Upgraded Dnd-Kit Drag-and-Drop Kanban Board */
+        <TaskBoard
+          tasks={filteredTasks}
+          projectKey={projectKey}
+          onSelectTask={onSelectTask}
+          onQuickStatusChange={onQuickStatusChange}
+          onOpenCreateTask={() => onOpenCreateTask()}
+        />
       )}
     </div>
   );

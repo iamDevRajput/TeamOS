@@ -64,6 +64,13 @@ export {
   getTaskById,
   updateTask,
   deleteTask,
+  createTaskComment,
+  listTaskComments,
+  deleteTaskComment,
+  linkPrToTask,
+  listTaskGithubLinks,
+  recordProjectRiskHistory,
+  listProjectRiskHistory,
 } from "./tasks";
 
 export {
@@ -108,7 +115,7 @@ export {
 export type { SaveInstallationParams } from "./github";
 
 // Re-export safe types and enums from Prisma Client
-export { TaskStatus, ActorType, OutboxStatus, OrgRole, ProposalKind, ProposalState, AiReservationState, Prisma } from "@prisma/client";
+export { TaskStatus, TaskPriority, ActorType, OutboxStatus, OrgRole, ProposalKind, ProposalState, AiReservationState, Prisma } from "@prisma/client";
 
 export type {
   User,

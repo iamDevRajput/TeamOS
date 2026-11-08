@@ -79,15 +79,15 @@ export function ReportsPanel({ orgId, projectId, apiBaseUrl }: ReportsPanelProps
   return (
     <div className="space-y-6">
       {/* Header Banner */}
-      <div className="bg-white p-5 rounded-xl border border-slate-200/90 shadow-xs flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+      <div className="bg-white dark:bg-slate-900 p-5 rounded-xl border border-slate-200/90 dark:border-slate-800 shadow-xs flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div>
           <div className="flex items-center gap-2">
-            <h3 className="text-sm font-bold text-slate-900 tracking-tight">Evidence-Backed Health Reports</h3>
+            <h3 className="text-sm font-bold text-slate-900 dark:text-slate-100 tracking-tight">Evidence-Backed Health Reports</h3>
             <Badge variant="info" size="xs">
               Verified Ground Truth
             </Badge>
           </div>
-          <p className="text-xs text-slate-500 mt-0.5 max-w-xl">
+          <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5 max-w-xl">
             Authoritative delivery reports compiled from deterministic CPM graph calculations and immutable task snapshots. All claims cite verified entity citations.
           </p>
         </div>
@@ -105,13 +105,13 @@ export function ReportsPanel({ orgId, projectId, apiBaseUrl }: ReportsPanelProps
       </div>
 
       {error && (
-        <div className="p-3 text-xs text-rose-700 bg-rose-50 border border-rose-200/80 rounded-xl">
+        <div className="p-3 text-xs text-rose-700 dark:text-rose-400 bg-rose-50 dark:bg-rose-950/40 border border-rose-200/80 dark:border-rose-900/60 rounded-xl">
           {error}
         </div>
       )}
 
       {loading ? (
-        <div className="p-12 text-center text-xs text-slate-400">Loading reports…</div>
+        <div className="p-12 text-center text-xs text-slate-400 dark:text-slate-500">Loading reports…</div>
       ) : reports.length === 0 ? (
         <EmptyState
           icon={<FileTextIcon className="w-5 h-5" />}
@@ -135,7 +135,7 @@ export function ReportsPanel({ orgId, projectId, apiBaseUrl }: ReportsPanelProps
             <div
               key={report.id}
               onClick={() => setSelectedReport(report)}
-              className="bg-white p-5 rounded-xl border border-slate-200/90 shadow-xs hover:border-blue-500 hover:shadow-card-hover transition-all cursor-pointer flex flex-col justify-between group"
+              className="bg-white dark:bg-slate-900 p-5 rounded-xl border border-slate-200/90 dark:border-slate-800 shadow-xs hover:border-blue-500 dark:hover:border-blue-500 hover:shadow-card-hover transition-all cursor-pointer flex flex-col justify-between group"
             >
               <div className="space-y-2">
                 <div className="flex items-center justify-between gap-2">
@@ -152,24 +152,24 @@ export function ReportsPanel({ orgId, projectId, apiBaseUrl }: ReportsPanelProps
                   >
                     {report.deliveryRisk} RISK
                   </Badge>
-                  <span className="text-[11px] font-mono text-slate-400">
+                  <span className="text-[11px] font-mono text-slate-400 dark:text-slate-500">
                     {new Date(report.createdAt).toLocaleDateString()}
                   </span>
                 </div>
 
-                <h4 className="text-sm font-bold text-slate-900 group-hover:text-blue-600 transition-colors">
+                <h4 className="text-sm font-bold text-slate-900 dark:text-slate-100 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
                   {report.title}
                 </h4>
-                <p className="text-xs text-slate-600 line-clamp-2 leading-relaxed">
+                <p className="text-xs text-slate-600 dark:text-slate-400 line-clamp-2 leading-relaxed">
                   {report.summary}
                 </p>
               </div>
 
-              <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between text-[11px] text-slate-400">
-                <span className="font-mono bg-slate-50 px-2 py-0.5 rounded border border-slate-200/80 text-[10px]">
+              <div className="mt-4 pt-3 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between text-[11px] text-slate-400 dark:text-slate-500">
+                <span className="font-mono bg-slate-50 dark:bg-slate-800 px-2 py-0.5 rounded border border-slate-200/80 dark:border-slate-700 text-[10px] text-slate-600 dark:text-slate-300">
                   Hash: {report.snapshotHash.slice(0, 8)}…
                 </span>
-                <span className="text-blue-600 font-semibold group-hover:translate-x-0.5 transition-transform">
+                <span className="text-blue-600 dark:text-blue-400 font-semibold group-hover:translate-x-0.5 transition-transform">
                   View Full Report →
                 </span>
               </div>

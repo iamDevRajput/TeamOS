@@ -33,6 +33,15 @@ export const TaskStatus = {
 
 export type TaskStatus = (typeof TaskStatus)[keyof typeof TaskStatus];
 
+export const TaskPriority = {
+  URGENT: 'URGENT',
+  HIGH: 'HIGH',
+  MEDIUM: 'MEDIUM',
+  LOW: 'LOW',
+} as const;
+
+export type TaskPriority = (typeof TaskPriority)[keyof typeof TaskPriority];
+
 export interface TaskDto {
   id: string;
   orgId: string;
@@ -41,6 +50,7 @@ export interface TaskDto {
   title: string;
   description?: string;
   status: TaskStatus;
+  priority: TaskPriority;
   assigneeId?: string;
   assigneeName?: string;
   remainingEstimateWorkdays?: number;
@@ -54,6 +64,7 @@ export interface CreateTaskDto {
   title: string;
   description?: string;
   status?: TaskStatus;
+  priority?: TaskPriority;
   assigneeId?: string;
   remainingEstimateWorkdays?: number;
   dueDate?: string;
@@ -63,10 +74,57 @@ export interface UpdateTaskDto {
   title?: string;
   description?: string;
   status?: TaskStatus;
+  priority?: TaskPriority;
   assigneeId?: string | null;
   remainingEstimateWorkdays?: number | null;
   dueDate?: string | null;
   expectedVersion: number;
+}
+
+export interface TaskCommentDto {
+  id: string;
+  orgId: string;
+  taskId: string;
+  userId: string;
+  userLogin?: string;
+  userDisplayName?: string;
+  userAvatarUrl?: string;
+  body: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CreateTaskCommentDto {
+  body: string;
+}
+
+export interface TaskGithubLinkDto {
+  id: string;
+  orgId: string;
+  taskId: string;
+  prNumber: number;
+  prTitle: string;
+  prUrl: string;
+  prBranch: string;
+  prState: string;
+  isStalled: boolean;
+  lastActivityAt: string;
+  createdAt: string;
+}
+
+export interface ProjectRiskHistoryDto {
+  id: string;
+  orgId: string;
+  projectId: string;
+  snapshotDate: string;
+  targetDate?: string;
+  forecastDate?: string;
+  scheduleVarianceDays: number;
+  criticalPathDuration: number;
+  criticalTaskCount: number;
+  riskLevel: string;
+  snapshotHash: string;
+  createdAt: string;
 }
 
 export interface ProjectDto {

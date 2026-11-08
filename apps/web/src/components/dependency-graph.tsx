@@ -65,16 +65,16 @@ export function DependencyGraph({
 
   if (loading) {
     return (
-      <div className="bg-white p-12 rounded-xl border border-slate-200/90 text-center space-y-3 shadow-xs">
+      <div className="bg-white dark:bg-slate-900 p-12 rounded-xl border border-slate-200/90 dark:border-slate-800 text-center space-y-3 shadow-xs">
         <div className="h-6 w-6 animate-spin rounded-full border-2 border-blue-600 border-t-transparent mx-auto" />
-        <p className="text-xs text-slate-500 font-medium">Computing topological DAG layout & critical paths...</p>
+        <p className="text-xs text-slate-500 dark:text-slate-400 font-medium">Computing topological DAG layout & critical paths...</p>
       </div>
     );
   }
 
   if (error) {
     return (
-      <div className="p-4 bg-rose-50 border border-rose-200/80 rounded-xl text-xs text-rose-700">
+      <div className="p-4 bg-rose-50 dark:bg-rose-950/30 border border-rose-200/80 dark:border-rose-900/50 rounded-xl text-xs text-rose-700 dark:text-rose-400">
         {error}
       </div>
     );
@@ -149,25 +149,25 @@ export function DependencyGraph({
   });
 
   return (
-    <div className="bg-white rounded-xl border border-slate-200/90 p-5 sm:p-6 space-y-6 shadow-xs">
+    <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200/90 dark:border-slate-800 p-5 sm:p-6 space-y-6 shadow-xs">
       {/* Header & Status Bar */}
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 pb-4 border-b border-slate-200/80">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 pb-4 border-b border-slate-200/80 dark:border-slate-800">
         <div>
           <div className="flex items-center gap-2">
-            <h3 className="text-sm font-bold text-slate-900 tracking-tight">
+            <h3 className="text-sm font-bold text-slate-900 dark:text-slate-100 tracking-tight">
               Task Dependency Graph (DAG)
             </h3>
             <Badge variant="success" size="xs">
               Finish-to-Start DAG Verified
             </Badge>
           </div>
-          <p className="text-xs text-slate-500 mt-0.5">
+          <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
             Deterministic topological sequencing. Blocker tasks strictly precede dependent execution.
           </p>
         </div>
 
         {/* Graph Legend */}
-        <div className="flex items-center gap-3 text-[11px] font-medium text-slate-500 bg-slate-50 px-3 py-1.5 rounded-lg border border-slate-200/80">
+        <div className="flex items-center gap-3 text-[11px] font-medium text-slate-500 dark:text-slate-400 bg-slate-50 dark:bg-slate-950 px-3 py-1.5 rounded-lg border border-slate-200/80 dark:border-slate-800">
           <div className="flex items-center gap-1.5">
             <span className="w-2 h-2 rounded-full bg-slate-400" />
             <span>Ready</span>
@@ -196,16 +196,16 @@ export function DependencyGraph({
             {levelGroups.map((stageTasks, stageIdx) => (
               <div
                 key={stageIdx}
-                className="flex-1 bg-slate-50/70 border border-slate-200/80 rounded-xl p-3.5 space-y-3 min-w-[240px]"
+                className="flex-1 bg-slate-50/70 dark:bg-slate-950/50 border border-slate-200/80 dark:border-slate-800/80 rounded-xl p-3.5 space-y-3 min-w-[240px]"
               >
-                <div className="flex items-center justify-between pb-2 border-b border-slate-200/70 text-xs font-bold text-slate-800">
+                <div className="flex items-center justify-between pb-2 border-b border-slate-200/70 dark:border-slate-800 text-xs font-bold text-slate-800 dark:text-slate-200">
                   <div className="flex items-center gap-1.5">
-                    <span className="w-5 h-5 rounded-full bg-blue-100 text-blue-700 text-[10px] font-bold flex items-center justify-center font-mono">
+                    <span className="w-5 h-5 rounded-full bg-blue-100 dark:bg-blue-950 text-blue-700 dark:text-blue-300 text-[10px] font-bold flex items-center justify-center font-mono">
                       {stageIdx + 1}
                     </span>
                     <span>Stage {stageIdx + 1}</span>
                   </div>
-                  <span className="font-mono text-[10px] text-slate-400">
+                  <span className="font-mono text-[10px] text-slate-400 dark:text-slate-500">
                     {stageTasks.length} task{stageTasks.length !== 1 ? 's' : ''}
                   </span>
                 </div>
@@ -228,16 +228,16 @@ export function DependencyGraph({
                       <div
                         key={t.id}
                         onClick={() => onSelectTask?.(t.id)}
-                        className={`bg-white rounded-lg p-3 border shadow-xs transition-all cursor-pointer space-y-2 hover:shadow-card-hover hover:border-blue-500 ${
+                        className={`bg-white dark:bg-slate-900 rounded-lg p-3 border shadow-xs transition-all cursor-pointer space-y-2 hover:shadow-card-hover hover:border-blue-500 ${
                           isBlocked
-                            ? 'border-amber-300 ring-1 ring-amber-200/80 bg-amber-50/20'
+                            ? 'border-amber-300 dark:border-amber-700 ring-1 ring-amber-200/80 dark:ring-amber-900/50 bg-amber-50/20 dark:bg-amber-950/20'
                             : t.status === 'DONE'
-                            ? 'border-emerald-200/80 bg-emerald-50/10'
-                            : 'border-slate-200/90'
+                            ? 'border-emerald-200/80 dark:border-emerald-800/80 bg-emerald-50/10 dark:bg-emerald-950/20'
+                            : 'border-slate-200/90 dark:border-slate-800'
                         }`}
                       >
                         <div className="flex items-center justify-between gap-1.5">
-                          <span className="font-mono text-[10px] font-bold text-slate-600 bg-slate-100 px-1.5 py-0.5 rounded border border-slate-200/80">
+                          <span className="font-mono text-[10px] font-bold text-slate-600 dark:text-slate-400 bg-slate-100 dark:bg-slate-800 px-1.5 py-0.5 rounded border border-slate-200/80 dark:border-slate-700">
                             {projectKey}-{t.number}
                           </span>
 
@@ -261,23 +261,23 @@ export function DependencyGraph({
                           )}
                         </div>
 
-                        <div className="text-xs font-semibold text-slate-900 line-clamp-2 leading-relaxed">
+                        <div className="text-xs font-semibold text-slate-900 dark:text-slate-100 line-clamp-2 leading-relaxed">
                           {t.title}
                         </div>
 
                         {blockers.length > 0 && (
-                          <div className="pt-2 border-t border-slate-100 space-y-1">
-                            <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider block">
+                          <div className="pt-2 border-t border-slate-100 dark:border-slate-800 space-y-1">
+                            <span className="text-[10px] font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wider block">
                               Waiting on:
                             </span>
                             <div className="flex flex-wrap gap-1">
-                              {blockers.map((b) => (
+                              {blockers.map((b, bIdx) => (
                                 <span
-                                  key={b?.id || Math.random()}
+                                  key={b?.id || `blocker-${bIdx}`}
                                   className={`text-[9px] font-mono px-1.5 py-0.5 rounded border ${
                                     b?.status === 'DONE'
-                                      ? 'bg-emerald-50 text-emerald-700 border-emerald-200 line-through'
-                                      : 'bg-amber-50 text-amber-800 border-amber-200 font-bold'
+                                      ? 'bg-emerald-50 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-400 border-emerald-200 dark:border-emerald-800 line-through'
+                                      : 'bg-amber-50 dark:bg-amber-950 text-amber-800 dark:text-amber-300 border-amber-200 dark:border-amber-800 font-bold'
                                   }`}
                                 >
                                   {projectKey}-{b?.number}
@@ -295,16 +295,16 @@ export function DependencyGraph({
           </div>
 
           {/* Active Dependency Edges List */}
-          <div className="pt-4 border-t border-slate-200/80 space-y-2.5">
+          <div className="pt-4 border-t border-slate-200/80 dark:border-slate-800 space-y-2.5">
             <div className="flex items-center justify-between">
-              <h4 className="text-xs font-bold text-slate-800 uppercase tracking-wider">
+              <h4 className="text-xs font-bold text-slate-800 dark:text-slate-200 uppercase tracking-wider">
                 Active Finish-to-Start Edges ({dependencies.length})
               </h4>
-              <span className="text-[11px] text-slate-400">Strictly Non-Cyclic</span>
+              <span className="text-[11px] text-slate-400 dark:text-slate-500">Strictly Non-Cyclic</span>
             </div>
 
             {dependencies.length === 0 ? (
-              <p className="text-xs text-slate-400 italic">
+              <p className="text-xs text-slate-400 dark:text-slate-500 italic">
                 No dependencies established yet. Tasks can be worked on concurrently.
               </p>
             ) : (
@@ -316,14 +316,14 @@ export function DependencyGraph({
                   return (
                     <div
                       key={`${d.blockerTaskId}-${d.blockedTaskId || (d as any).dependentTaskId}`}
-                      className="p-2.5 bg-slate-50 border border-slate-200/80 rounded-lg text-xs flex items-center justify-between shadow-xs"
+                      className="p-2.5 bg-slate-50 dark:bg-slate-950 border border-slate-200/80 dark:border-slate-800 rounded-lg text-xs flex items-center justify-between shadow-xs"
                     >
                       <div className="flex items-center gap-2">
-                        <span className="font-mono font-bold text-slate-800 bg-white px-1.5 py-0.5 rounded border border-slate-200">
+                        <span className="font-mono font-bold text-slate-800 dark:text-slate-200 bg-white dark:bg-slate-900 px-1.5 py-0.5 rounded border border-slate-200 dark:border-slate-700">
                           {projectKey}-{blocker?.number || '?'}
                         </span>
-                        <ArrowRightIcon className="w-3.5 h-3.5 text-blue-600" />
-                        <span className="font-mono font-bold text-slate-800 bg-white px-1.5 py-0.5 rounded border border-slate-200">
+                        <ArrowRightIcon className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
+                        <span className="font-mono font-bold text-slate-800 dark:text-slate-200 bg-white dark:bg-slate-900 px-1.5 py-0.5 rounded border border-slate-200 dark:border-slate-700">
                           {projectKey}-{blocked?.number || '?'}
                         </span>
                       </div>

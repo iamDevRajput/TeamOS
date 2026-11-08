@@ -12,6 +12,7 @@ interface ReportDetailModalProps {
 
 export function ReportDetailModal({ report, onClose }: ReportDetailModalProps) {
   const [copied, setCopied] = useState(false);
+  const [copiedMd, setCopiedMd] = useState(false);
 
   if (!report) return null;
 
@@ -20,6 +21,36 @@ export function ReportDetailModal({ report, onClose }: ReportDetailModalProps) {
     navigator.clipboard.writeText(report.snapshotHash);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
+  }
+
+  function exportMarkdown() {
+    if (!report) return;
+    const md = [
+      `# ${report.title}`,
+      `**Delivery Risk**: ${report.deliveryRisk} | **Generated**: ${new Date(report.createdAt).toLocaleString()} by @${report.creatorLogin || 'system'}`,
+      `**Cryptographic Integrity Seal**: \`${report.snapshotHash}\``,
+      '',
+      '## Executive Summary',
+      report.summary,
+      '',
+      '## Deterministic Snapshot Metrics',
+      `- **Forecast Delivery Date**: ${report.snapshot.forecastDate || 'Undefined'}`,
+      `- **Target Due Date**: ${report.snapshot.targetDueDate || 'None'}`,
+      `- **Critical Path Tasks**: ${report.snapshot.criticalPathTaskIds.length}`,
+      `- **Blocked Tasks**: ${report.snapshot.blockedTasks}`,
+      '',
+      '## Verified Claims & Citations',
+      ...report.claims.map(
+        (c) => `- **[${c.type}]** ${c.claim} (Citations: ${c.evidenceIds.join(', ')})`,
+      ),
+      '',
+      '---',
+      '_Verified by TeamOS Delivery Risk Intelligence — Deterministic CPM graph validation._',
+    ].join('\n');
+
+    navigator.clipboard.writeText(md);
+    setCopiedMd(true);
+    setTimeout(() => setCopiedMd(false), 2500);
   }
 
   return (
@@ -53,46 +84,46 @@ export function ReportDetailModal({ report, onClose }: ReportDetailModalProps) {
     >
       <div className="space-y-5">
         <div>
-          <h3 className="text-base font-bold text-slate-900 tracking-tight">{report.title}</h3>
+          <h3 className="text-base font-bold text-slate-900 dark:text-slate-100 tracking-tight">{report.title}</h3>
         </div>
 
         {/* Executive Summary */}
         <div className="space-y-1.5">
-          <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block">
+          <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500 block">
             Verified Executive Summary
           </span>
-          <div className="p-4 bg-blue-50/50 border border-blue-200/80 rounded-xl text-xs text-slate-800 leading-relaxed font-medium">
+          <div className="p-4 bg-blue-50/50 dark:bg-blue-950/30 border border-blue-200/80 dark:border-blue-900/50 rounded-xl text-xs text-slate-800 dark:text-slate-200 leading-relaxed font-medium">
             {report.summary}
           </div>
         </div>
 
         {/* Ground-Truth Snapshot Metrics */}
         <div className="space-y-1.5">
-          <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block">
+          <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500 block">
             Authoritative Snapshot Metrics
           </span>
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-            <div className="p-3 bg-slate-50 rounded-xl border border-slate-200/80">
-              <div className="text-[10px] font-semibold text-slate-400 uppercase">Forecast Date</div>
-              <div className="text-xs font-bold text-slate-900 mt-0.5 font-mono">
+            <div className="p-3 bg-slate-50 dark:bg-slate-950 rounded-xl border border-slate-200/80 dark:border-slate-800">
+              <div className="text-[10px] font-semibold text-slate-400 dark:text-slate-500 uppercase">Forecast Date</div>
+              <div className="text-xs font-bold text-slate-900 dark:text-slate-100 mt-0.5 font-mono">
                 {report.snapshot.forecastDate || 'Undefined'}
               </div>
             </div>
-            <div className="p-3 bg-slate-50 rounded-xl border border-slate-200/80">
-              <div className="text-[10px] font-semibold text-slate-400 uppercase">Target Due</div>
-              <div className="text-xs font-bold text-slate-900 mt-0.5 font-mono">
+            <div className="p-3 bg-slate-50 dark:bg-slate-950 rounded-xl border border-slate-200/80 dark:border-slate-800">
+              <div className="text-[10px] font-semibold text-slate-400 dark:text-slate-500 uppercase">Target Due</div>
+              <div className="text-xs font-bold text-slate-900 dark:text-slate-100 mt-0.5 font-mono">
                 {report.snapshot.targetDueDate || 'None'}
               </div>
             </div>
-            <div className="p-3 bg-slate-50 rounded-xl border border-slate-200/80">
-              <div className="text-[10px] font-semibold text-slate-400 uppercase">Critical Path</div>
-              <div className="text-xs font-bold text-slate-900 mt-0.5 font-mono">
+            <div className="p-3 bg-slate-50 dark:bg-slate-950 rounded-xl border border-slate-200/80 dark:border-slate-800">
+              <div className="text-[10px] font-semibold text-slate-400 dark:text-slate-500 uppercase">Critical Path</div>
+              <div className="text-xs font-bold text-slate-900 dark:text-slate-100 mt-0.5 font-mono">
                 {report.snapshot.criticalPathTaskIds.length} tasks
               </div>
             </div>
-            <div className="p-3 bg-slate-50 rounded-xl border border-slate-200/80">
-              <div className="text-[10px] font-semibold text-slate-400 uppercase">Blocked Tasks</div>
-              <div className="text-xs font-bold text-amber-600 mt-0.5 font-mono">
+            <div className="p-3 bg-slate-50 dark:bg-slate-950 rounded-xl border border-slate-200/80 dark:border-slate-800">
+              <div className="text-[10px] font-semibold text-slate-400 dark:text-slate-500 uppercase">Blocked Tasks</div>
+              <div className="text-xs font-bold text-amber-600 dark:text-amber-400 mt-0.5 font-mono">
                 {report.snapshot.blockedTasks} tasks
               </div>
             </div>
@@ -102,7 +133,7 @@ export function ReportDetailModal({ report, onClose }: ReportDetailModalProps) {
         {/* Grounded Claims & Citations */}
         <div className="space-y-2">
           <div className="flex items-center justify-between">
-            <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block">
+            <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500 block">
               Verified Claims & Evidence Citations ({report.claims.length})
             </span>
             <Badge variant="success" size="xs">
@@ -114,24 +145,24 @@ export function ReportDetailModal({ report, onClose }: ReportDetailModalProps) {
             {report.claims.map((claim) => (
               <div
                 key={claim.id}
-                className="p-3.5 bg-white border border-slate-200/90 rounded-xl shadow-xs space-y-1.5"
+                className="p-3.5 bg-white dark:bg-slate-900 border border-slate-200/90 dark:border-slate-800 rounded-xl shadow-xs space-y-1.5"
               >
                 <div className="flex items-center justify-between gap-2">
-                  <span className="font-mono text-[10px] font-bold text-blue-600 bg-blue-50 px-2 py-0.5 rounded border border-blue-200/80">
+                  <span className="font-mono text-[10px] font-bold text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-950/60 px-2 py-0.5 rounded border border-blue-200/80 dark:border-blue-900/60">
                     {claim.type}
                   </span>
-                  <span className="text-[10px] text-slate-400 font-mono">
+                  <span className="text-[10px] text-slate-400 dark:text-slate-500 font-mono">
                     Citations: {claim.evidenceIds.length}
                   </span>
                 </div>
-                <p className="text-xs text-slate-800 font-medium leading-relaxed">{claim.claim}</p>
+                <p className="text-xs text-slate-800 dark:text-slate-200 font-medium leading-relaxed">{claim.claim}</p>
                 {claim.evidenceIds.length > 0 && (
                   <div className="flex flex-wrap items-center gap-1.5 pt-1">
-                    <span className="text-[10px] text-slate-400">Evidence IDs:</span>
+                    <span className="text-[10px] text-slate-400 dark:text-slate-500">Evidence IDs:</span>
                     {claim.evidenceIds.map((id) => (
                       <span
                         key={id}
-                        className="font-mono text-[9px] bg-slate-100 text-slate-600 px-1.5 py-0.5 rounded border border-slate-200"
+                        className="font-mono text-[9px] bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 px-1.5 py-0.5 rounded border border-slate-200 dark:border-slate-700"
                       >
                         {id.slice(0, 8)}…
                       </span>
@@ -144,11 +175,11 @@ export function ReportDetailModal({ report, onClose }: ReportDetailModalProps) {
         </div>
 
         {/* Cryptographic Snapshot Integrity Seal */}
-        <div className="p-3.5 bg-slate-50 border border-slate-200/90 rounded-xl flex items-center justify-between gap-3 text-xs text-slate-600">
+        <div className="p-3.5 bg-slate-50 dark:bg-slate-950 border border-slate-200/90 dark:border-slate-800 rounded-xl flex items-center justify-between gap-3 text-xs text-slate-600 dark:text-slate-400">
           <div className="flex items-center gap-2.5">
-            <ShieldIcon className="w-5 h-5 text-emerald-600 shrink-0" />
+            <ShieldIcon className="w-5 h-5 text-emerald-600 dark:text-emerald-400 shrink-0" />
             <div className="text-[11px] leading-relaxed">
-              <span className="font-bold text-slate-800">Cryptographic Integrity Seal:</span> SHA-256 snapshot guarantees verified deterministic graph state with zero AI hallucination.
+              <span className="font-bold text-slate-800 dark:text-slate-200">Cryptographic Integrity Seal:</span> SHA-256 snapshot guarantees verified deterministic graph state with zero AI hallucination.
             </div>
           </div>
           <Button type="button" variant="outline" size="xs" onClick={copyHash}>
@@ -157,7 +188,10 @@ export function ReportDetailModal({ report, onClose }: ReportDetailModalProps) {
         </div>
 
         {/* Footer */}
-        <div className="pt-3 border-t border-slate-100 flex justify-end">
+        <div className="pt-3 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between">
+          <Button type="button" variant="primary" size="sm" onClick={exportMarkdown}>
+            {copiedMd ? '✓ Copied Markdown to Clipboard' : 'Export as Markdown'}
+          </Button>
           <Button type="button" variant="outline" size="sm" onClick={onClose}>
             Close Report
           </Button>

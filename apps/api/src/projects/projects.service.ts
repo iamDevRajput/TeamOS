@@ -12,6 +12,10 @@ import {
   UpdateTaskDto,
   TaskDto,
   TaskWithDependenciesDto,
+  TaskCommentDto,
+  CreateTaskCommentDto,
+  TaskGithubLinkDto,
+  ProjectRiskHistoryDto,
   OrgRole,
   TaskStatus,
 } from '@teamos/contracts';
@@ -22,11 +26,15 @@ import {
   getProjectById,
   updateProject,
   createTask,
-  listTasks,
   listTasksWithDependencies,
   getTaskById,
   updateTask,
   deleteTask,
+  createTaskComment as dbCreateTaskComment,
+  listTaskComments as dbListTaskComments,
+  deleteTaskComment as dbDeleteTaskComment,
+  listTaskGithubLinks as dbListTaskGithubLinks,
+  listProjectRiskHistory as dbListProjectRiskHistory,
 } from '@teamos/database';
 
 @Injectable()
@@ -134,6 +142,7 @@ export class ProjectsService {
         title: t.title,
         description: t.description || undefined,
         status: t.status as TaskStatus,
+        priority: (t.priority as any) || 'MEDIUM',
         assigneeId: t.assigneeId || undefined,
         remainingEstimateWorkdays: t.remainingEstimateWorkdays ?? undefined,
         dueDate: t.dueDate ? t.dueDate.toISOString().slice(0, 10) : undefined,
@@ -194,6 +203,7 @@ export class ProjectsService {
         title: t.title,
         description: t.description || undefined,
         status: t.status as TaskStatus,
+        priority: (t.priority as any) || 'MEDIUM',
         assigneeId: t.assigneeId || undefined,
         remainingEstimateWorkdays: t.remainingEstimateWorkdays ?? undefined,
         dueDate: t.dueDate ? t.dueDate.toISOString().slice(0, 10) : undefined,
@@ -229,6 +239,84 @@ export class ProjectsService {
       }
       throw new BadRequestException(err.message || 'Failed to delete task.');
     }
+  }
+
+  // --- Task Comments ---
+
+  async createTaskComment(
+    orgId: string,
+    userId: string,
+    role: OrgRole,
+    projectId: string,
+    taskId: string,
+    dto: CreateTaskCommentDto,
+  ): Promise<TaskCommentDto> {
+    const context = this.buildTenantContext(orgId, userId, role);
+    try {
+      return await dbCreateTaskComment(context, projectId, taskId, dto);
+    } catch (err: any) {
+      if (err.message?.includes('not found')) {
+        throw new NotFoundException(err.message);
+      }
+      throw new BadRequestException(err.message || 'Failed to post task comment.');
+    }
+  }
+
+  async listTaskComments(
+    orgId: string,
+    userId: string,
+    role: OrgRole,
+    projectId: string,
+    taskId: string,
+  ): Promise<TaskCommentDto[]> {
+    const context = this.buildTenantContext(orgId, userId, role);
+    return dbListTaskComments(context, projectId, taskId);
+  }
+
+  async deleteTaskComment(
+    orgId: string,
+    userId: string,
+    role: OrgRole,
+    projectId: string,
+    taskId: string,
+    commentId: string,
+  ): Promise<{ success: boolean }> {
+    const context = this.buildTenantContext(orgId, userId, role);
+    try {
+      await dbDeleteTaskComment(context, projectId, taskId, commentId);
+      return { success: true };
+    } catch (err: any) {
+      if (err.message?.includes('Permission denied')) {
+        throw new BadRequestException(err.message);
+      }
+      if (err.message?.includes('not found')) {
+        throw new NotFoundException(err.message);
+      }
+      throw new BadRequestException(err.message || 'Failed to delete comment.');
+    }
+  }
+
+  // --- GitHub PR Links & Risk History ---
+
+  async listTaskGithubLinks(
+    orgId: string,
+    userId: string,
+    role: OrgRole,
+    taskId: string,
+  ): Promise<TaskGithubLinkDto[]> {
+    const context = this.buildTenantContext(orgId, userId, role);
+    return dbListTaskGithubLinks(context, taskId);
+  }
+
+  async listProjectRiskHistory(
+    orgId: string,
+    userId: string,
+    role: OrgRole,
+    projectId: string,
+    limitDays = 30,
+  ): Promise<ProjectRiskHistoryDto[]> {
+    const context = this.buildTenantContext(orgId, userId, role);
+    return dbListProjectRiskHistory(context, projectId, limitDays);
   }
 }
 

@@ -20,6 +20,13 @@ enum TaskStatus {
   CANCELLED
 }
 
+enum TaskPriority {
+  URGENT
+  HIGH
+  MEDIUM
+  LOW
+}
+
 enum ActorType {
   USER
   SYSTEM
@@ -73,6 +80,7 @@ model User {
   createdReports      ProjectReport[] @relation("ReportCreator")
   aiReservations      AiBudgetReservation[]
   githubInstallations GithubInstallation[] @relation("GithubInstallationCreator")
+  taskComments        TaskComment[]
 
   @@map("users")
 }
@@ -113,6 +121,9 @@ model Organization {
   aiReservations AiBudgetReservation[]
   githubInstallations GithubInstallation[]
   githubRepositories  GithubRepository[]
+  taskComments        TaskComment[]
+  taskGithubLinks     TaskGithubLink[]
+  projectRiskHistory  ProjectRiskHistory[]
 
   @@map("organizations")
 }
@@ -174,6 +185,7 @@ model Project {
   proposals    Proposal[]
   reports      ProjectReport[]
   githubRepositories GithubRepository[]
+  riskHistory  ProjectRiskHistory[]
 
   @@unique([orgId, id])
   @@unique([orgId, key])
@@ -189,6 +201,7 @@ model Task {
   title                     String
   description               String?
   status                    TaskStatus @default(TODO)
+  priority                  TaskPriority @default(MEDIUM)
   assigneeId                String?    @map("assignee_id") @db.Uuid
   remainingEstimateWorkdays Int?       @map("remaining_estimate_workdays")
   dueDate                   DateTime?  @map("due_date") @db.Date
@@ -202,13 +215,16 @@ model Task {
   assignee     Membership?  @relation(fields: [orgId, assigneeId], references: [orgId, userId], onDelete: NoAction)
   creator      User         @relation("TaskCreator", fields: [createdBy], references: [id], onDelete: Restrict)
 
-  blockedBy TaskDependency[] @relation("BlockedTask")
-  blocks    TaskDependency[] @relation("BlockerTask")
+  blockedBy    TaskDependency[] @relation("BlockedTask")
+  blocks       TaskDependency[] @relation("BlockerTask")
+  comments     TaskComment[]
+  githubLinks  TaskGithubLink[]
 
   @@unique([orgId, id])
   @@unique([orgId, projectId, number])
   @@index([orgId, projectId])
   @@index([orgId, assigneeId])
+  @@index([orgId, priority])
   @@map("tasks")
 }
 
@@ -409,4 +425,69 @@ model GithubWebhookDelivery {
 
   @@index([status, createdAt])
   @@map("github_webhook_deliveries")
+}
+
+model TaskComment {
+  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  orgId     String   @map("org_id") @db.Uuid
+  taskId    String   @map("task_id") @db.Uuid
+  userId    String   @map("user_id") @db.Uuid
+  body      String   @db.Text
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  organization Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  task         Task         @relation(fields: [orgId, taskId], references: [orgId, id], onDelete: Cascade)
+  author       User         @relation(fields: [userId], references: [id], onDelete: Restrict)
+
+  @@unique([orgId, id], map: "uq_task_comments_org_id")
+  @@index([orgId, taskId])
+  @@index([orgId, userId])
+  @@map("task_comments")
+}
+
+model TaskGithubLink {
+  id              String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  orgId           String   @map("org_id") @db.Uuid
+  taskId          String   @map("task_id") @db.Uuid
+  prNumber        Int      @map("pr_number")
+  prTitle         String   @map("pr_title")
+  prUrl           String   @map("pr_url")
+  prBranch        String   @map("pr_branch")
+  prState         String   @default("OPEN") @map("pr_state")
+  isStalled       Boolean  @default(false) @map("is_stalled")
+  lastActivityAt  DateTime @default(now()) @map("last_activity_at") @db.Timestamptz(6)
+  createdAt       DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt       DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  organization Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  task         Task         @relation(fields: [orgId, taskId], references: [orgId, id], onDelete: Cascade)
+
+  @@unique([orgId, id], map: "uq_task_github_links_org_id")
+  @@unique([orgId, taskId, prNumber], map: "uq_task_github_links_org_task_pr")
+  @@index([orgId, taskId])
+  @@map("task_github_links")
+}
+
+model ProjectRiskHistory {
+  id                     String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  orgId                  String    @map("org_id") @db.Uuid
+  projectId              String    @map("project_id") @db.Uuid
+  snapshotDate           DateTime  @map("snapshot_date") @db.Date
+  targetDate             DateTime? @map("target_date") @db.Date
+  forecastDate           DateTime? @map("forecast_date") @db.Date
+  scheduleVarianceDays   Int       @default(0) @map("schedule_variance_days")
+  criticalPathDuration   Int       @default(0) @map("critical_path_duration")
+  criticalTaskCount      Int       @default(0) @map("critical_task_count")
+  riskLevel              String    @default("LOW") @map("risk_level")
+  snapshotHash           String    @map("snapshot_hash")
+  createdAt              DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  organization Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  project      Project      @relation(fields: [orgId, projectId], references: [orgId, id], onDelete: Cascade)
+
+  @@unique([orgId, id], map: "uq_project_risk_history_org_id")
+  @@unique([orgId, projectId, snapshotDate], map: "uq_project_risk_history_org_project_date")
+  @@index([orgId, projectId, snapshotDate], map: "project_risk_history_lookup_idx")
+  @@map("project_risk_history")
 }

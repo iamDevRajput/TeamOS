@@ -100,7 +100,7 @@ export function AiPlanGeneratorModal({
 
         {/* Quick Engineering Templates */}
         <div className="space-y-1.5">
-          <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block">
+          <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500 block">
             Quick Architecture Templates:
           </span>
           <div className="space-y-1">
@@ -109,9 +109,9 @@ export function AiPlanGeneratorModal({
                 key={idx}
                 type="button"
                 onClick={() => setBrief(sample)}
-                className="w-full text-left text-[11px] text-slate-700 hover:text-blue-600 bg-slate-50 hover:bg-blue-50/70 p-2 rounded-lg border border-slate-200/80 transition-colors line-clamp-1"
+                className="w-full text-left text-[11px] text-slate-700 dark:text-slate-300 hover:text-blue-600 dark:hover:text-blue-400 bg-slate-50 dark:bg-slate-900 hover:bg-blue-50/70 dark:hover:bg-blue-950/40 p-2 rounded-lg border border-slate-200/80 dark:border-slate-800 transition-colors line-clamp-1"
               >
-                <span className="text-purple-600 font-bold mr-1.5">↳</span>
+                <span className="text-purple-600 dark:text-purple-400 font-bold mr-1.5">↳</span>
                 {sample}
               </button>
             ))}
@@ -119,12 +119,12 @@ export function AiPlanGeneratorModal({
         </div>
 
         {/* Human-in-the-Loop Security Guardrail */}
-        <div className="p-3.5 bg-blue-50/70 border border-blue-200/80 rounded-lg text-blue-900 text-xs leading-relaxed space-y-1">
-          <div className="flex items-center gap-1.5 font-bold text-blue-800">
-            <ShieldIcon className="w-3.5 h-3.5 text-blue-600" />
+        <div className="p-3.5 bg-blue-50/70 dark:bg-blue-950/30 border border-blue-200/80 dark:border-blue-900/50 rounded-lg text-blue-900 dark:text-blue-200 text-xs leading-relaxed space-y-1">
+          <div className="flex items-center gap-1.5 font-bold text-blue-800 dark:text-blue-300">
+            <ShieldIcon className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
             <span>Human Approval Guardrail</span>
           </div>
-          <p className="text-[11px] text-blue-800/90 leading-relaxed">
+          <p className="text-[11px] text-blue-800/90 dark:text-blue-300/90 leading-relaxed">
             All generated items are staged as a <strong>PENDING Proposal</strong> with exact before/after diffs. No database tasks or edges will be created in {projectKey} until an authorized team member explicitly reviews and approves.
           </p>
         </div>

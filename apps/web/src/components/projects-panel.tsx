@@ -129,9 +129,9 @@ export function ProjectsPanel({
   return (
     <div className="space-y-5">
       {/* Project Selector & Actions Header */}
-      <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 bg-white p-3 sm:p-4 rounded-xl border border-slate-200/90 shadow-xs">
+      <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 bg-white dark:bg-slate-900 p-3 sm:p-4 rounded-xl border border-slate-200/90 dark:border-slate-800 shadow-xs">
         <div className="flex items-center gap-2 overflow-x-auto pb-1 sm:pb-0 scrollbar-none flex-1">
-          <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400 whitespace-nowrap mr-1">
+          <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500 whitespace-nowrap mr-1">
             Projects:
           </span>
           {projects.map((p) => {
@@ -144,12 +144,12 @@ export function ProjectsPanel({
                 className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all whitespace-nowrap shadow-xs ${
                   isSelected
                     ? 'bg-blue-600 text-white shadow-xs border border-blue-700/40'
-                    : 'bg-slate-50 text-slate-700 hover:bg-slate-100 border border-slate-200/80'
+                    : 'bg-slate-50 dark:bg-slate-800 text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700 border border-slate-200/80 dark:border-slate-700'
                 }`}
               >
                 <span
                   className={`font-mono text-[10px] px-1.5 py-0.2 rounded ${
-                    isSelected ? 'bg-blue-700 text-blue-100' : 'bg-slate-200 text-slate-600'
+                    isSelected ? 'bg-blue-700 text-blue-100' : 'bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300'
                   }`}
                 >
                   {p.key}
@@ -157,7 +157,7 @@ export function ProjectsPanel({
                 <span>{p.name}</span>
                 <span
                   className={`text-[10px] px-1.5 py-0.2 rounded-full font-mono ${
-                    isSelected ? 'bg-blue-700/80 text-blue-100' : 'bg-slate-200 text-slate-600'
+                    isSelected ? 'bg-blue-700/80 text-blue-100' : 'bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300'
                   }`}
                 >
                   {p.taskCount ?? 0}
@@ -180,13 +180,13 @@ export function ProjectsPanel({
       </div>
 
       {error && (
-        <div className="p-3 text-xs text-rose-700 bg-rose-50 border border-rose-200/80 rounded-lg">
+        <div className="p-3 text-xs text-rose-700 dark:text-rose-400 bg-rose-50 dark:bg-rose-950/40 border border-rose-200/80 dark:border-rose-900/60 rounded-lg">
           {error}
         </div>
       )}
 
       {loadingProjects ? (
-        <div className="p-12 text-center text-xs text-slate-400">Loading projects...</div>
+        <div className="p-12 text-center text-xs text-slate-400 dark:text-slate-500">Loading projects...</div>
       ) : projects.length === 0 ? (
         <EmptyState
           icon={<LayersIcon className="w-5 h-5" />}
@@ -206,30 +206,30 @@ export function ProjectsPanel({
       ) : selectedProject ? (
         <div className="space-y-4">
           {/* Active Project Metadata Header */}
-          <div className="bg-white p-4 sm:p-5 rounded-xl border border-slate-200/90 shadow-xs flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+          <div className="bg-white dark:bg-slate-900 p-4 sm:p-5 rounded-xl border border-slate-200/90 dark:border-slate-800 shadow-xs flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
             <div className="space-y-1">
               <div className="flex items-center gap-2">
-                <span className="font-mono text-xs font-bold bg-blue-50 text-blue-700 border border-blue-200/80 px-2 py-0.5 rounded">
+                <span className="font-mono text-xs font-bold bg-blue-50 dark:bg-blue-950 text-blue-700 dark:text-blue-300 border border-blue-200/80 dark:border-blue-900/60 px-2 py-0.5 rounded">
                   {selectedProject.key}
                 </span>
-                <h3 className="text-base font-bold text-slate-900 tracking-tight">
+                <h3 className="text-base font-bold text-slate-900 dark:text-slate-100 tracking-tight">
                   {selectedProject.name}
                 </h3>
               </div>
-              <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-slate-500 pt-0.5">
+              <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-slate-500 dark:text-slate-400 pt-0.5">
                 {selectedProject.startDate && (
                   <span className="flex items-center gap-1">
-                    <CalendarIcon className="w-3.5 h-3.5 text-slate-400" />
-                    <span>Start: <strong className="text-slate-700 font-mono">{selectedProject.startDate}</strong></span>
+                    <CalendarIcon className="w-3.5 h-3.5 text-slate-400 dark:text-slate-500" />
+                    <span>Start: <strong className="text-slate-700 dark:text-slate-300 font-mono">{selectedProject.startDate}</strong></span>
                   </span>
                 )}
                 {selectedProject.dueDate && (
                   <span className="flex items-center gap-1">
-                    <ClockIcon className="w-3.5 h-3.5 text-slate-400" />
-                    <span>Target Due: <strong className="text-slate-700 font-mono">{selectedProject.dueDate}</strong></span>
+                    <ClockIcon className="w-3.5 h-3.5 text-slate-400 dark:text-slate-500" />
+                    <span>Target Due: <strong className="text-slate-700 dark:text-slate-300 font-mono">{selectedProject.dueDate}</strong></span>
                   </span>
                 )}
-                <span className="text-slate-400">Timezone: {selectedProject.timezone}</span>
+                <span className="text-slate-400 dark:text-slate-500">Timezone: {selectedProject.timezone}</span>
               </div>
             </div>
 
@@ -245,26 +245,26 @@ export function ProjectsPanel({
           </div>
 
           {/* Sub Navigation Tabs */}
-          <div className="flex items-center gap-1 sm:gap-2 border-b border-slate-200/90 text-xs font-semibold overflow-x-auto scrollbar-none">
+          <div className="flex items-center gap-1 sm:gap-2 border-b border-slate-200/90 dark:border-slate-800 text-xs font-semibold overflow-x-auto scrollbar-none">
             <button
               type="button"
               onClick={() => setProjectTab('tasks')}
               className={`pb-2.5 px-3 border-b-2 transition-all whitespace-nowrap flex items-center gap-1.5 ${
                 projectTab === 'tasks'
-                  ? 'border-blue-600 text-blue-600 font-bold'
-                  : 'border-transparent text-slate-500 hover:text-slate-800'
+                  ? 'border-blue-600 text-blue-600 dark:text-blue-400 font-bold'
+                  : 'border-transparent text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200'
               }`}
             >
               <span>Tasks & Board</span>
-              <span className="font-mono text-[10px] text-slate-400">({tasks.length})</span>
+              <span className="font-mono text-[10px] text-slate-400 dark:text-slate-500">({tasks.length})</span>
             </button>
             <button
               type="button"
               onClick={() => setProjectTab('dependencies')}
               className={`pb-2.5 px-3 border-b-2 transition-all whitespace-nowrap flex items-center gap-1.5 ${
                 projectTab === 'dependencies'
-                  ? 'border-blue-600 text-blue-600 font-bold'
-                  : 'border-transparent text-slate-500 hover:text-slate-800'
+                  ? 'border-blue-600 text-blue-600 dark:text-blue-400 font-bold'
+                  : 'border-transparent text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200'
               }`}
             >
               <GitBranchIcon className="w-3.5 h-3.5" />
@@ -275,8 +275,8 @@ export function ProjectsPanel({
               onClick={() => setProjectTab('risk')}
               className={`pb-2.5 px-3 border-b-2 transition-all whitespace-nowrap flex items-center gap-1.5 ${
                 projectTab === 'risk'
-                  ? 'border-blue-600 text-blue-600 font-bold'
-                  : 'border-transparent text-slate-500 hover:text-slate-800'
+                  ? 'border-blue-600 text-blue-600 dark:text-blue-400 font-bold'
+                  : 'border-transparent text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200'
               }`}
             >
               <ActivityIcon className="w-3.5 h-3.5" />
@@ -287,8 +287,8 @@ export function ProjectsPanel({
               onClick={() => setProjectTab('proposals')}
               className={`pb-2.5 px-3 border-b-2 transition-all whitespace-nowrap flex items-center gap-1.5 ${
                 projectTab === 'proposals'
-                  ? 'border-blue-600 text-blue-600 font-bold'
-                  : 'border-transparent text-slate-500 hover:text-slate-800'
+                  ? 'border-blue-600 text-blue-600 dark:text-blue-400 font-bold'
+                  : 'border-transparent text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200'
               }`}
             >
               <LayersIcon className="w-3.5 h-3.5" />
@@ -299,8 +299,8 @@ export function ProjectsPanel({
               onClick={() => setProjectTab('reports')}
               className={`pb-2.5 px-3 border-b-2 transition-all whitespace-nowrap flex items-center gap-1.5 ${
                 projectTab === 'reports'
-                  ? 'border-blue-600 text-blue-600 font-bold'
-                  : 'border-transparent text-slate-500 hover:text-slate-800'
+                  ? 'border-blue-600 text-blue-600 dark:text-blue-400 font-bold'
+                  : 'border-transparent text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200'
               }`}
             >
               <FileTextIcon className="w-3.5 h-3.5" />

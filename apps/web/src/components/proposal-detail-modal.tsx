@@ -140,24 +140,24 @@ export function ProposalDetailModal({
     >
       <div className="space-y-4">
         <div>
-          <h3 className="text-base font-bold text-slate-900 tracking-tight">{proposal.title}</h3>
+          <h3 className="text-base font-bold text-slate-900 dark:text-slate-100 tracking-tight">{proposal.title}</h3>
           {proposal.description && (
-            <p className="text-xs text-slate-600 bg-slate-50 p-3 rounded-lg border border-slate-200/80 mt-2 leading-relaxed">
+            <p className="text-xs text-slate-600 dark:text-slate-400 bg-slate-50 dark:bg-slate-950 p-3 rounded-lg border border-slate-200/80 dark:border-slate-800 mt-2 leading-relaxed">
               {proposal.description}
             </p>
           )}
         </div>
 
         {proposal.rejectionReason && (
-          <div className="p-3 bg-rose-50 border border-rose-200/80 rounded-lg text-xs text-rose-800">
+          <div className="p-3 bg-rose-50 dark:bg-rose-950/40 border border-rose-200/80 dark:border-rose-900/60 rounded-lg text-xs text-rose-800 dark:text-rose-300">
             <strong>Rejection Reason:</strong> {proposal.rejectionReason}
           </div>
         )}
 
         {conflict && (
-          <div className="p-3 bg-amber-50 border border-amber-300 rounded-lg text-amber-900 text-xs leading-relaxed space-y-1">
+          <div className="p-3 bg-amber-50 dark:bg-amber-950/40 border border-amber-300 dark:border-amber-800 rounded-lg text-amber-900 dark:text-amber-200 text-xs leading-relaxed space-y-1">
             <p className="font-bold flex items-center gap-1.5">
-              <AlertTriangleIcon className="w-4 h-4 text-amber-600" />
+              <AlertTriangleIcon className="w-4 h-4 text-amber-600 dark:text-amber-400" />
               <span>Concurrency Revalidation Conflict (HTTP 409)</span>
             </p>
             <p>{conflict}</p>
@@ -165,18 +165,18 @@ export function ProposalDetailModal({
         )}
 
         {error && (
-          <div className="p-3 text-xs text-rose-700 bg-rose-50 border border-rose-200/80 rounded-lg">
+          <div className="p-3 text-xs text-rose-700 dark:text-rose-400 bg-rose-50 dark:bg-rose-950/40 border border-rose-200/80 dark:border-rose-900/60 rounded-lg">
             {error}
           </div>
         )}
 
         {/* Structured Change Diff */}
         <div className="space-y-3 pt-2">
-          <div className="flex items-center justify-between pb-1 border-b border-slate-200/70">
-            <h4 className="text-xs font-bold uppercase tracking-wider text-slate-800">
+          <div className="flex items-center justify-between pb-1 border-b border-slate-200/70 dark:border-slate-800">
+            <h4 className="text-xs font-bold uppercase tracking-wider text-slate-800 dark:text-slate-200">
               Proposed Changes Diff
             </h4>
-            <span className="text-[11px] text-slate-400 font-mono">
+            <span className="text-[11px] text-slate-400 dark:text-slate-500 font-mono">
               +{tasksToCreate.length} tasks · +{depsToAdd.length} edges
             </span>
           </div>
@@ -184,18 +184,18 @@ export function ProposalDetailModal({
           {/* Created Tasks */}
           {tasksToCreate.length > 0 && (
             <div className="space-y-1.5">
-              <span className="text-[11px] font-bold text-emerald-700 block">
+              <span className="text-[11px] font-bold text-emerald-700 dark:text-emerald-400 block">
                 + Tasks to Create ({tasksToCreate.length}):
               </span>
               <div className="space-y-1 pl-2.5 border-l-2 border-emerald-400">
                 {tasksToCreate.map((t) => (
                   <div
                     key={t.tempId}
-                    className="p-2.5 bg-emerald-50/50 rounded-lg border border-emerald-200/70 text-xs flex items-center justify-between"
+                    className="p-2.5 bg-emerald-50/50 dark:bg-emerald-950/30 rounded-lg border border-emerald-200/70 dark:border-emerald-800/60 text-xs flex items-center justify-between"
                   >
-                    <span className="font-medium text-slate-900">{t.title}</span>
+                    <span className="font-medium text-slate-900 dark:text-slate-100">{t.title}</span>
                     {t.remainingEstimateWorkdays !== undefined && (
-                      <span className="font-mono text-[10px] text-emerald-800 bg-emerald-100/80 px-2 py-0.5 rounded font-semibold">
+                      <span className="font-mono text-[10px] text-emerald-800 dark:text-emerald-300 bg-emerald-100/80 dark:bg-emerald-900/60 px-2 py-0.5 rounded font-semibold">
                         {t.remainingEstimateWorkdays}d estimate
                       </span>
                     )}
@@ -208,18 +208,18 @@ export function ProposalDetailModal({
           {/* Dependencies to Add */}
           {depsToAdd.length > 0 && (
             <div className="space-y-1.5">
-              <span className="text-[11px] font-bold text-blue-700 block">
+              <span className="text-[11px] font-bold text-blue-700 dark:text-blue-400 block">
                 + Dependencies to Add ({depsToAdd.length}):
               </span>
               <div className="space-y-1 pl-2.5 border-l-2 border-blue-400">
                 {depsToAdd.map((d, i) => (
                   <div
                     key={i}
-                    className="p-2.5 bg-blue-50/50 rounded-lg border border-blue-200/70 text-xs flex items-center gap-2"
+                    className="p-2.5 bg-blue-50/50 dark:bg-blue-950/30 rounded-lg border border-blue-200/70 dark:border-blue-900/60 text-xs flex items-center gap-2"
                   >
-                    <span className="font-mono text-slate-800 font-semibold">{d.blockerId}</span>
-                    <ArrowRightIcon className="w-3.5 h-3.5 text-blue-600" />
-                    <span className="font-mono text-slate-800 font-semibold">{d.dependentId}</span>
+                    <span className="font-mono text-slate-800 dark:text-slate-200 font-semibold">{d.blockerId}</span>
+                    <ArrowRightIcon className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
+                    <span className="font-mono text-slate-800 dark:text-slate-200 font-semibold">{d.dependentId}</span>
                   </div>
                 ))}
               </div>
@@ -229,7 +229,7 @@ export function ProposalDetailModal({
 
         {/* Rejection Form Drawer */}
         {rejecting && (
-          <div className="pt-3 border-t border-slate-200/80 space-y-2">
+          <div className="pt-3 border-t border-slate-200/80 dark:border-slate-800 space-y-2">
             <Input
               label="Reason for Rejection"
               value={rejectReason}
@@ -254,7 +254,7 @@ export function ProposalDetailModal({
         )}
 
         {/* Action Controls */}
-        <div className="flex items-center justify-between pt-4 border-t border-slate-100">
+        <div className="flex items-center justify-between pt-4 border-t border-slate-100 dark:border-slate-800">
           <Button type="button" variant="ghost" size="sm" onClick={onClose}>
             Close
           </Button>

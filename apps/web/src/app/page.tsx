@@ -30,7 +30,9 @@ import { AuditTimeline } from '../components/audit-timeline';
 import { RiskOverviewPanel } from '../components/risk-overview-panel';
 import { ProposalsPanel } from '../components/proposals-panel';
 import { ReportsPanel } from '../components/reports-panel';
-import { Badge, Button, EmptyState } from '../components/ui';
+import { OnboardingWizard } from '../components/onboarding-wizard';
+import { GuidedTourTooltip } from '../components/guided-tour-tooltip';
+import { Badge, Button, EmptyState, ToastProvider } from '../components/ui';
 import {
   ShieldIcon,
   ActivityIcon,
@@ -79,6 +81,46 @@ export default function HomePage() {
   const [transferOpen, setTransferOpen] = useState(false);
   const [aiPlannerOpen, setAiPlannerOpen] = useState(false);
   const [commandPaletteOpen, setCommandPaletteOpen] = useState(false);
+  const [onboardingOpen, setOnboardingOpen] = useState(false);
+  const [guidedTourOpen, setGuidedTourOpen] = useState(false);
+
+  // 6. Theme State (persisted with dark-first developer aesthetic)
+  const [theme, setTheme] = useState<'light' | 'dark'>('dark');
+
+  useEffect(() => {
+    try {
+      const savedTheme = localStorage.getItem('teamos_theme') as 'light' | 'dark' | null;
+      if (savedTheme === 'light' || savedTheme === 'dark') {
+        setTheme(savedTheme);
+        if (savedTheme === 'dark') {
+          document.documentElement.classList.add('dark');
+        } else {
+          document.documentElement.classList.remove('dark');
+        }
+      } else {
+        setTheme('dark');
+        document.documentElement.classList.add('dark');
+      }
+    } catch {
+      setTheme('dark');
+      document.documentElement.classList.add('dark');
+    }
+  }, []);
+
+  const handleToggleTheme = () => {
+    const nextTheme = theme === 'dark' ? 'light' : 'dark';
+    setTheme(nextTheme);
+    try {
+      localStorage.setItem('teamos_theme', nextTheme);
+    } catch {
+      // ignore
+    }
+    if (nextTheme === 'dark') {
+      document.documentElement.classList.add('dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+    }
+  };
 
   const [refreshKey, setRefreshKey] = useState(0);
 
@@ -493,7 +535,8 @@ export default function HomePage() {
   // ==========================================
 
   return (
-    <div className="flex h-screen w-screen overflow-hidden bg-slate-50 text-slate-900">
+    <ToastProvider>
+      <div className="flex h-screen w-screen overflow-hidden bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 transition-colors">
       {/* 1. Global Navigation Rail (Panel 1 - far left, 56px) */}
       <NavigationRail
         activeSection={activeSection}
@@ -537,7 +580,7 @@ export default function HomePage() {
       />
 
       {/* 3. Main Workspace Area (Panel 3 - large workspace & controls) */}
-      <div className="flex-1 flex flex-col min-w-0 h-full overflow-hidden bg-slate-100/50">
+      <div className="flex-1 flex flex-col min-w-0 h-full overflow-hidden bg-slate-100/50 dark:bg-slate-950 transition-colors">
         {/* Top Global Header */}
         <TopHeader
           sessionData={sessionData}
@@ -562,7 +605,11 @@ export default function HomePage() {
               ? 'Settings'
               : undefined
           }
+          theme={theme}
+          onToggleTheme={handleToggleTheme}
+          onOpenOnboarding={() => setOnboardingOpen(true)}
           onOpenSearch={() => setCommandPaletteOpen(true)}
+          onOpenGuidedTour={() => setGuidedTourOpen(true)}
           onOpenAiPlanner={() => setAiPlannerOpen(true)}
           onToggleSidebar={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
           isSidebarCollapsed={isSidebarCollapsed}
@@ -624,6 +671,7 @@ export default function HomePage() {
                       tasks={tasks}
                       members={members}
                       currentUserRole={currentUserRole}
+                      currentUserId={sessionData?.user?.id}
                       apiBaseUrl={API_BASE_URL}
                       onSelectTask={(task) => setSelectedTask(task)}
                       onOpenCreateTask={(initialStatus) => {
@@ -644,17 +692,17 @@ export default function HomePage() {
               {/* SECTION: Home / Workspace Overview */}
               {activeSection === 'home' && (
                 <div className="space-y-5 max-w-5xl mx-auto">
-                  <div className="bg-white rounded-xl border border-slate-200/90 p-5 sm:p-6 shadow-xs flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                  <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200/90 dark:border-slate-800 p-5 sm:p-6 shadow-xs flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 transition-colors">
                     <div className="space-y-1">
                       <div className="flex items-center gap-2.5">
-                        <h1 className="text-xl font-bold text-slate-900 tracking-tight">
+                        <h1 className="text-xl font-bold text-slate-900 dark:text-slate-100 tracking-tight">
                           {activeOrg.name} Overview
                         </h1>
                         <Badge variant="purple" size="sm">
                           {activeOrg.role}
                         </Badge>
                       </div>
-                      <p className="text-xs text-slate-500">
+                      <p className="text-xs text-slate-500 dark:text-slate-400">
                         Delivery Risk Intelligence and workspace operations.
                       </p>
                     </div>
@@ -685,56 +733,56 @@ export default function HomePage() {
 
                   {/* 3 Executive Pillars */}
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <div className="bg-white rounded-xl border border-slate-200/90 p-4 shadow-xs space-y-2">
+                    <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200/90 dark:border-slate-800 p-4 shadow-xs space-y-2 transition-colors">
                       <div className="flex items-center justify-between">
-                        <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Team Capacity</span>
+                        <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">Team Capacity</span>
                         <UsersIcon className="w-4 h-4 text-slate-400" />
                       </div>
-                      <div className="text-2xl font-bold text-slate-900 font-mono">
+                      <div className="text-2xl font-bold text-slate-900 dark:text-slate-100 font-mono">
                         {members.length} {members.length === 1 ? 'Member' : 'Members'}
                       </div>
-                      <p className="text-xs text-slate-500">
+                      <p className="text-xs text-slate-500 dark:text-slate-400">
                         Active collaborators with tenant-isolated role permissions.
                       </p>
                     </div>
 
-                    <div className="bg-white rounded-xl border border-slate-200/90 p-4 shadow-xs space-y-2">
+                    <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200/90 dark:border-slate-800 p-4 shadow-xs space-y-2 transition-colors">
                       <div className="flex items-center justify-between">
-                        <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Security & Isolation</span>
-                        <ShieldIcon className="w-4 h-4 text-emerald-600" />
+                        <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">Security & Isolation</span>
+                        <ShieldIcon className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
                       </div>
-                      <div className="text-base font-bold text-slate-900">PostgreSQL RLS Active</div>
-                      <p className="text-xs text-slate-500">
+                      <div className="text-base font-bold text-slate-900 dark:text-slate-100">PostgreSQL RLS Active</div>
+                      <p className="text-xs text-slate-500 dark:text-slate-400">
                         All tables enforce composite foreign keys and non-bypassable row-level policies.
                       </p>
                     </div>
 
-                    <div className="bg-white rounded-xl border border-slate-200/90 p-4 shadow-xs space-y-2">
+                    <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200/90 dark:border-slate-800 p-4 shadow-xs space-y-2 transition-colors">
                       <div className="flex items-center justify-between">
-                        <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Risk Intelligence</span>
-                        <ActivityIcon className="w-4 h-4 text-blue-600" />
+                        <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">Risk Intelligence</span>
+                        <ActivityIcon className="w-4 h-4 text-blue-600 dark:text-sky-400" />
                       </div>
-                      <div className="text-base font-bold text-slate-900">Deterministic CPM Engine</div>
-                      <p className="text-xs text-slate-500">
+                      <div className="text-base font-bold text-slate-900 dark:text-slate-100">Deterministic CPM Engine</div>
+                      <p className="text-xs text-slate-500 dark:text-slate-400">
                         DAG validation, CPM critical path analysis, and zero-hallucination reporting.
                       </p>
                     </div>
                   </div>
 
                   {/* Active Projects List Preview */}
-                  <div className="bg-white rounded-xl border border-slate-200/90 p-4 sm:p-5 shadow-xs space-y-3">
+                  <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200/90 dark:border-slate-800 p-4 sm:p-5 shadow-xs space-y-3 transition-colors">
                     <div className="flex items-center justify-between">
-                      <h3 className="text-sm font-bold text-slate-900">Active Projects</h3>
+                      <h3 className="text-sm font-bold text-slate-900 dark:text-slate-100">Active Projects</h3>
                       <button
                         type="button"
                         onClick={() => setActiveSection('projects')}
-                        className="text-xs font-semibold text-blue-600 hover:underline"
+                        className="text-xs font-semibold text-blue-600 dark:text-sky-400 hover:underline"
                       >
                         View all
                       </button>
                     </div>
 
-                    <div className="divide-y divide-slate-100">
+                    <div className="divide-y divide-slate-100 dark:divide-slate-800">
                       {projects.map((p) => (
                         <div
                           key={p.id}
@@ -742,15 +790,15 @@ export default function HomePage() {
                             setSelectedProjectId(p.id);
                             setActiveSection('projects');
                           }}
-                          className="flex items-center justify-between py-2.5 hover:bg-slate-50 px-2 rounded-lg cursor-pointer transition-colors"
+                          className="flex items-center justify-between py-2.5 hover:bg-slate-50 dark:hover:bg-slate-800/60 px-2 rounded-lg cursor-pointer transition-colors"
                         >
                           <div className="flex items-center gap-2.5">
-                            <span className="font-mono text-xs font-bold bg-slate-100 px-2 py-0.5 rounded text-slate-700 border border-slate-200">
+                            <span className="font-mono text-xs font-bold bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700">
                               {p.key}
                             </span>
-                            <span className="text-xs font-semibold text-slate-900">{p.name}</span>
+                            <span className="text-xs font-semibold text-slate-900 dark:text-slate-100">{p.name}</span>
                           </div>
-                          <div className="flex items-center gap-3 text-xs text-slate-500">
+                          <div className="flex items-center gap-3 text-xs text-slate-500 dark:text-slate-400">
                             <span>{p.taskCount ?? 0} work items</span>
                             {p.dueDate && <span className="font-mono text-slate-400">Due {p.dueDate}</span>}
                           </div>
@@ -764,14 +812,14 @@ export default function HomePage() {
               {/* SECTION: Your Work */}
               {activeSection === 'your-work' && (
                 <div className="space-y-4 max-w-5xl mx-auto">
-                  <div className="bg-white rounded-xl border border-slate-200/90 p-4 sm:p-5 shadow-xs">
+                  <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200/90 dark:border-slate-800 p-4 sm:p-5 shadow-xs transition-colors">
                     <div className="flex items-center gap-3">
-                      <div className="w-8 h-8 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center font-bold">
+                      <div className="w-8 h-8 rounded-lg bg-blue-50 dark:bg-blue-950/40 text-blue-600 dark:text-sky-400 flex items-center justify-center font-bold">
                         <CheckSquareIcon className="w-4 h-4" />
                       </div>
                       <div>
-                        <h2 className="text-sm font-bold text-slate-900">Your Assigned Work</h2>
-                        <p className="text-xs text-slate-500">
+                        <h2 className="text-sm font-bold text-slate-900 dark:text-slate-100">Your Assigned Work</h2>
+                        <p className="text-xs text-slate-500 dark:text-slate-400">
                           Work items assigned to @{sessionData.user.login} in the active project.
                         </p>
                       </div>
@@ -795,6 +843,27 @@ export default function HomePage() {
                         setCreateTaskOpen(true);
                       }}
                       onQuickStatusChange={handleQuickStatusChange}
+                      onInlineCreateTask={
+                        selectedProject && activeOrg
+                          ? async (title, status, priority) => {
+                              await fetch(
+                                `${API_BASE_URL}/api/v1/orgs/${activeOrg.id}/projects/${selectedProject.id}/tasks`,
+                                {
+                                  method: 'POST',
+                                  headers: { 'Content-Type': 'application/json' },
+                                  credentials: 'include',
+                                  body: JSON.stringify({
+                                    title,
+                                    status,
+                                    priority,
+                                    remainingEstimateWorkdays: 3,
+                                  }),
+                                },
+                              );
+                              setRefreshKey((k) => k + 1);
+                            }
+                          : undefined
+                      }
                     />
                   )}
                 </div>
@@ -853,7 +922,7 @@ export default function HomePage() {
               {activeSection === 'members' && (
                 <div className="max-w-5xl mx-auto space-y-4">
                   <div className="flex items-center justify-between pb-2">
-                    <h2 className="text-base font-bold text-slate-900">Workspace Members</h2>
+                    <h2 className="text-base font-bold text-slate-900 dark:text-slate-100">Workspace Members</h2>
                     {canManageInvitations && (
                       <Button
                         type="button"
@@ -889,14 +958,14 @@ export default function HomePage() {
               {/* SECTION: Settings */}
               {activeSection === 'settings' && (
                 <div className="max-w-3xl mx-auto space-y-4">
-                  <div className="bg-white rounded-xl border border-slate-200/90 p-5 shadow-xs space-y-3">
-                    <h2 className="text-base font-bold text-slate-900">Workspace Settings</h2>
-                    <div className="space-y-2 text-xs text-slate-600">
+                  <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200/90 dark:border-slate-800 p-5 shadow-xs space-y-3 transition-colors">
+                    <h2 className="text-base font-bold text-slate-900 dark:text-slate-100">Workspace Settings</h2>
+                    <div className="space-y-2 text-xs text-slate-600 dark:text-slate-300">
                       <div>
-                        Name: <strong className="text-slate-900">{activeOrg.name}</strong>
+                        Name: <strong className="text-slate-900 dark:text-slate-100">{activeOrg.name}</strong>
                       </div>
                       <div>
-                        Slug: <span className="font-mono text-slate-700">{activeOrg.slug}</span>
+                        Slug: <span className="font-mono text-slate-700 dark:text-slate-300">{activeOrg.slug}</span>
                       </div>
                       <div>
                         Your Role: <Badge variant="purple" size="xs">{currentUserRole}</Badge>
@@ -904,10 +973,21 @@ export default function HomePage() {
                       <div>
                         Organization ID: <span className="font-mono text-slate-400">{activeOrg.id}</span>
                       </div>
+                      <div className="pt-2 flex items-center justify-between border-t border-slate-100 dark:border-slate-800">
+                        <span>Theme Preference:</span>
+                        <Button
+                          type="button"
+                          variant="secondary"
+                          size="xs"
+                          onClick={handleToggleTheme}
+                        >
+                          {theme === 'dark' ? 'Dark Mode (Active)' : 'Light Mode (Active)'}
+                        </Button>
+                      </div>
                     </div>
 
                     {currentUserRole === 'OWNER' && (
-                      <div className="pt-3 border-t border-slate-100">
+                      <div className="pt-3 border-t border-slate-100 dark:border-slate-800">
                         <Button
                           type="button"
                           variant="danger"
@@ -1001,6 +1081,7 @@ export default function HomePage() {
           orgId={activeOrg.id}
           members={members}
           apiBaseUrl={API_BASE_URL}
+          currentUserId={sessionData?.user?.id}
           onUpdated={() => setRefreshKey((k) => k + 1)}
         />
       )}
@@ -1044,6 +1125,43 @@ export default function HomePage() {
           onSuccess={() => setRefreshKey((k) => k + 1)}
         />
       )}
-    </div>
+
+      {/* Product Onboarding Wizard */}
+      {sessionData && (
+        <OnboardingWizard
+          isOpen={onboardingOpen}
+          onClose={() => setOnboardingOpen(false)}
+          sessionData={sessionData}
+          orgs={orgs}
+          activeOrg={activeOrg}
+          onSelectOrg={(org) => {
+            setActiveOrg(org);
+            setRefreshKey((k) => k + 1);
+          }}
+          projects={projects}
+          selectedProjectId={selectedProjectId}
+          onSelectProject={(id) => {
+            setSelectedProjectId(id);
+            setActiveSection('projects');
+          }}
+          onOpenCreateProject={() => {
+            setOnboardingOpen(false);
+            setCreateProjectOpen(true);
+          }}
+          onOpenCreateOrg={() => {
+            setOnboardingOpen(false);
+            setCreateOrgOpen(true);
+          }}
+        />
+      )}
+
+      {/* Guided Tour Spotlight Tooltip */}
+      <GuidedTourTooltip
+        isOpen={guidedTourOpen}
+        onClose={() => setGuidedTourOpen(false)}
+        onOpenCommandPalette={() => setCommandPaletteOpen(true)}
+      />
+      </div>
+    </ToastProvider>
   );
 }

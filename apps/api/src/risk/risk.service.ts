@@ -11,6 +11,7 @@ import {
   listTasks,
   listProjectDependencies,
   getProjectById,
+  recordProjectRiskHistory,
 } from '@teamos/database';
 import {
   calculateProjectRisk,
@@ -92,6 +93,23 @@ export class RiskService {
         forecastFinishDate: schedule?.earlyFinish ?? null,
       };
     });
+
+    const blockedCount = mappedTasks.filter((t) => t.isBlocked).length;
+    const riskScore = isDelayed
+      ? Math.min(100, Math.round((deliveryVarianceWorkdays || 1) * 15))
+      : (result.criticalTaskIds.length > 0 ? 30 : 10);
+
+    // Persist daily delivery risk snapshot asynchronously
+    recordProjectRiskHistory(context, projectId, {
+      snapshotDate: new Date(),
+      targetDate: result.projectTargetDate ? new Date(result.projectTargetDate) : null,
+      forecastDate: result.projectForecastFinish ? new Date(result.projectForecastFinish) : null,
+      scheduleVarianceDays: deliveryVarianceWorkdays || 0,
+      criticalPathDuration: result.criticalPaths[0]?.totalWorkdays ?? 0,
+      criticalTaskCount: result.criticalTaskIds.length,
+      riskLevel: isDelayed ? 'HIGH' : (result.criticalTaskIds.length > 0 ? 'MEDIUM' : 'LOW'),
+      snapshotHash: `risk-snap-${Date.now()}`,
+    }).catch(() => {});
 
     return {
       projectId: project.id,

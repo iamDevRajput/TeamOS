@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import type { TaskDto, TaskStatus, OrgMemberDto } from '@teamos/contracts';
+import type { TaskDto, TaskStatus, TaskPriority, OrgMemberDto } from '@teamos/contracts';
 import { Modal, Input, Textarea, Select, Button } from './ui';
 
 interface CreateTaskModalProps {
@@ -30,6 +30,7 @@ export function CreateTaskModal({
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [status, setStatus] = useState<TaskStatus>(initialStatus);
+  const [priority, setPriority] = useState<TaskPriority>('MEDIUM');
   const [assigneeId, setAssigneeId] = useState('');
   const [estimate, setEstimate] = useState<string>('3');
   const [dueDate, setDueDate] = useState('');
@@ -39,6 +40,7 @@ export function CreateTaskModal({
   React.useEffect(() => {
     if (isOpen) {
       setStatus(initialStatus);
+      setPriority('MEDIUM');
       setTitle('');
       setDescription('');
       setAssigneeId('');
@@ -69,6 +71,7 @@ export function CreateTaskModal({
           title: title.trim(),
           description: description.trim() || undefined,
           status,
+          priority,
           assigneeId: assigneeId || undefined,
           remainingEstimateWorkdays: estimate ? Number(estimate) : undefined,
           dueDate: dueDate || undefined,
@@ -127,7 +130,7 @@ export function CreateTaskModal({
           placeholder="Technical context, acceptance criteria, PR links..."
         />
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
           <Select
             label="Initial Status"
             value={status}
@@ -137,6 +140,17 @@ export function CreateTaskModal({
             <option value="IN_PROGRESS">In Progress</option>
             <option value="DONE">Done</option>
             <option value="CANCELLED">Cancelled</option>
+          </Select>
+
+          <Select
+            label="Priority"
+            value={priority}
+            onChange={(e) => setPriority(e.target.value as TaskPriority)}
+          >
+            <option value="URGENT">🔴 Urgent</option>
+            <option value="HIGH">🟠 High</option>
+            <option value="MEDIUM">🟡 Medium</option>
+            <option value="LOW">🔵 Low</option>
           </Select>
 
           <Select

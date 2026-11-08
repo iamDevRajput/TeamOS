@@ -17,6 +17,10 @@ import {
   UpdateTaskDto,
   TaskDto,
   TaskWithDependenciesDto,
+  TaskCommentDto,
+  CreateTaskCommentDto,
+  TaskGithubLinkDto,
+  ProjectRiskHistoryDto,
   OrgRole,
   TaskStatus,
 } from '@teamos/contracts';
@@ -185,6 +189,100 @@ export class ProjectsController {
       membership.role as OrgRole,
       projectId,
       taskId,
+    );
+  }
+
+  // --- Task Comments ---
+
+  @Post(':projectId/tasks/:taskId/comments')
+  @RequireRole('MEMBER')
+  createTaskComment(
+    @CurrentOrgId() orgId: string,
+    @CurrentUser() user: SessionUser,
+    @CurrentMembership() membership: Membership,
+    @Param('projectId') projectId: string,
+    @Param('taskId') taskId: string,
+    @Body() dto: CreateTaskCommentDto,
+  ): Promise<TaskCommentDto> {
+    return this.projectsService.createTaskComment(
+      orgId,
+      user.userId,
+      membership.role as OrgRole,
+      projectId,
+      taskId,
+      dto,
+    );
+  }
+
+  @Get(':projectId/tasks/:taskId/comments')
+  listTaskComments(
+    @CurrentOrgId() orgId: string,
+    @CurrentUser() user: SessionUser,
+    @CurrentMembership() membership: Membership,
+    @Param('projectId') projectId: string,
+    @Param('taskId') taskId: string,
+  ): Promise<TaskCommentDto[]> {
+    return this.projectsService.listTaskComments(
+      orgId,
+      user.userId,
+      membership.role as OrgRole,
+      projectId,
+      taskId,
+    );
+  }
+
+  @Delete(':projectId/tasks/:taskId/comments/:commentId')
+  @RequireRole('MEMBER')
+  deleteTaskComment(
+    @CurrentOrgId() orgId: string,
+    @CurrentUser() user: SessionUser,
+    @CurrentMembership() membership: Membership,
+    @Param('projectId') projectId: string,
+    @Param('taskId') taskId: string,
+    @Param('commentId') commentId: string,
+  ): Promise<{ success: boolean }> {
+    return this.projectsService.deleteTaskComment(
+      orgId,
+      user.userId,
+      membership.role as OrgRole,
+      projectId,
+      taskId,
+      commentId,
+    );
+  }
+
+  // --- GitHub PR Links & Risk History ---
+
+  @Get(':projectId/tasks/:taskId/github-links')
+  listTaskGithubLinks(
+    @CurrentOrgId() orgId: string,
+    @CurrentUser() user: SessionUser,
+    @CurrentMembership() membership: Membership,
+    @Param('projectId') _projectId: string,
+    @Param('taskId') taskId: string,
+  ): Promise<TaskGithubLinkDto[]> {
+    return this.projectsService.listTaskGithubLinks(
+      orgId,
+      user.userId,
+      membership.role as OrgRole,
+      taskId,
+    );
+  }
+
+  @Get(':projectId/risk/history')
+  listProjectRiskHistory(
+    @CurrentOrgId() orgId: string,
+    @CurrentUser() user: SessionUser,
+    @CurrentMembership() membership: Membership,
+    @Param('projectId') projectId: string,
+    @Query('days') days?: string,
+  ): Promise<ProjectRiskHistoryDto[]> {
+    return this.projectsService.listProjectRiskHistory(
+      orgId,
+      user.userId,
+      membership.role as OrgRole,
+      projectId,
+      days ? parseInt(days, 10) : 30,
     );
   }
 }

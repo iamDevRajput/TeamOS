@@ -71,17 +71,17 @@ export function ProposalsPanel({
   return (
     <div className="space-y-4">
       {/* Header Banner */}
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 bg-white p-4 rounded-xl border border-slate-200/90 shadow-xs">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 bg-white dark:bg-slate-900 p-4 rounded-xl border border-slate-200/90 dark:border-slate-800 shadow-xs">
         <div>
           <div className="flex items-center gap-2">
-            <h3 className="text-sm font-bold text-slate-900 tracking-tight">
+            <h3 className="text-sm font-bold text-slate-900 dark:text-slate-100 tracking-tight">
               Project Proposals & Plans
             </h3>
             <Badge variant="purple" size="xs">
               Human Review & Concurrency Guarded
             </Badge>
           </div>
-          <p className="text-xs text-slate-500 mt-0.5">
+          <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
             Structured change sets and AI plans. Changes only mutate the project when an authorized owner or admin approves.
           </p>
         </div>
@@ -92,7 +92,7 @@ export function ProposalsPanel({
             variant="secondary"
             size="sm"
             onClick={() => setAiModalOpen(true)}
-            leftIcon={<SparklesIcon className="w-3.5 h-3.5 text-purple-600" />}
+            leftIcon={<SparklesIcon className="w-3.5 h-3.5 text-purple-600 dark:text-purple-400" />}
             className="flex-1 sm:flex-initial"
           >
             AI Plan Generator
@@ -111,13 +111,13 @@ export function ProposalsPanel({
       </div>
 
       {error && (
-        <div className="p-3 text-xs text-rose-700 bg-rose-50 border border-rose-200/80 rounded-lg">
+        <div className="p-3 text-xs text-rose-700 dark:text-rose-400 bg-rose-50 dark:bg-rose-950/40 border border-rose-200/80 dark:border-rose-900/60 rounded-lg">
           {error}
         </div>
       )}
 
       {loading ? (
-        <div className="p-8 text-center text-xs text-slate-400">Loading proposals...</div>
+        <div className="p-8 text-center text-xs text-slate-400 dark:text-slate-500">Loading proposals...</div>
       ) : proposals.length === 0 ? (
         <EmptyState
           icon={<FileTextIcon className="w-5 h-5" />}
@@ -144,7 +144,7 @@ export function ProposalsPanel({
               <div
                 key={p.id}
                 onClick={() => setSelectedProposal(p)}
-                className="bg-white p-4 rounded-xl border border-slate-200/90 shadow-xs hover:border-blue-500 hover:shadow-card-hover transition-all cursor-pointer flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 group"
+                className="bg-white dark:bg-slate-900 p-4 rounded-xl border border-slate-200/90 dark:border-slate-800 shadow-xs hover:border-blue-500 dark:hover:border-blue-500 hover:shadow-card-hover transition-all cursor-pointer flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 group"
               >
                 <div className="space-y-1.5 flex-1 min-w-0">
                   <div className="flex items-center gap-2">
@@ -160,29 +160,29 @@ export function ProposalsPanel({
                     >
                       {p.state}
                     </Badge>
-                    <span className="font-mono text-[10px] text-slate-400 font-medium">
+                    <span className="font-mono text-[10px] text-slate-400 dark:text-slate-500 font-medium">
                       {p.kind}
                     </span>
-                    <h4 className="text-xs font-bold text-slate-900 group-hover:text-blue-600 transition-colors truncate">
+                    <h4 className="text-xs font-bold text-slate-900 dark:text-slate-100 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors truncate">
                       {p.title}
                     </h4>
                   </div>
-                  <p className="text-xs text-slate-500">
+                  <p className="text-xs text-slate-500 dark:text-slate-400">
                     By @{p.creatorLogin || 'user'} • {new Date(p.createdAt).toLocaleDateString()}
                     {p.description ? ` • "${p.description}"` : ''}
                   </p>
                 </div>
 
-                <div className="flex items-center gap-2 text-[11px] text-slate-500 shrink-0">
-                  <span className="bg-slate-50 border border-slate-200/80 px-2 py-0.5 rounded font-mono">
+                <div className="flex items-center gap-2 text-[11px] text-slate-500 dark:text-slate-400 shrink-0">
+                  <span className="bg-slate-50 dark:bg-slate-800 border border-slate-200/80 dark:border-slate-700 px-2 py-0.5 rounded font-mono text-slate-700 dark:text-slate-300">
                     +{taskCount} tasks
                   </span>
                   {depCount > 0 && (
-                    <span className="bg-slate-50 border border-slate-200/80 px-2 py-0.5 rounded font-mono">
+                    <span className="bg-slate-50 dark:bg-slate-800 border border-slate-200/80 dark:border-slate-700 px-2 py-0.5 rounded font-mono text-slate-700 dark:text-slate-300">
                       +{depCount} edges
                     </span>
                   )}
-                  <span className="text-blue-600 font-semibold group-hover:translate-x-0.5 transition-transform text-xs">
+                  <span className="text-blue-600 dark:text-blue-400 font-semibold group-hover:translate-x-0.5 transition-transform text-xs">
                     Review →
                   </span>
                 </div>

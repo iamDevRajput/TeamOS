@@ -4,4 +4,5 @@ export * from './badge';
 export * from './modal';
 export * from './input';
 export * from './empty-state';
+export * from './toast';
 

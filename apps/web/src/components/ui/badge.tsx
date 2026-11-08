@@ -113,3 +113,45 @@ export function StatusBadge({ status }: { status: string }) {
   }
 }
 
+export function PriorityBadge({
+  priority = 'MEDIUM',
+  size = 'xs',
+}: {
+  priority?: string;
+  size?: 'xs' | 'sm';
+}) {
+  const p = (priority || 'MEDIUM').toUpperCase();
+  switch (p) {
+    case 'URGENT':
+      return (
+        <Badge variant="danger" size={size} dot>
+          Urgent
+        </Badge>
+      );
+    case 'HIGH':
+      return (
+        <Badge variant="warning" size={size} dot>
+          High
+        </Badge>
+      );
+    case 'MEDIUM':
+      return (
+        <Badge variant="info" size={size}>
+          Medium
+        </Badge>
+      );
+    case 'LOW':
+      return (
+        <Badge variant="default" size={size}>
+          Low
+        </Badge>
+      );
+    default:
+      return (
+        <Badge variant="default" size={size}>
+          {p}
+        </Badge>
+      );
+  }
+}
+

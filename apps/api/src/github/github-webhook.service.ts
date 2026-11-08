@@ -5,6 +5,7 @@ import {
   saveWebhookDelivery,
   createProposal,
   saveGithubInstallation,
+  linkPrToTask,
   TenantContext,
   OrgRole,
 } from '@teamos/database';
@@ -132,21 +133,19 @@ export class GithubWebhookService {
         `GitHub PR #${pr.number} (${action}, merged=${isMerged}): detected ${matchedKeys.length} task keys.`,
       );
 
-      // If PR is merged and references project tasks, suggest status change via human-reviewable Proposal
       let proposalCreated = false;
-      if (action === 'closed' && isMerged && matchedKeys.length > 0) {
-        try {
-          const repoId = payload.repository?.id;
-          if (repoId) {
-            // Find repository mapping
-            const repo = await this.prisma.githubRepository.findFirst({
-              where: { repoId: BigInt(repoId) },
-              include: { project: true },
-            });
+      const repoId = payload.repository?.id;
 
-            if (repo && repo.projectId) {
-              const matchedKey = matchedKeys.find((k) => k.projectKey === repo.project?.key);
-              if (matchedKey) {
+      if (repoId && matchedKeys.length > 0) {
+        try {
+          const repo = await this.prisma.githubRepository.findFirst({
+            where: { repoId: BigInt(repoId) },
+            include: { project: true },
+          });
+
+          if (repo && repo.projectId) {
+            for (const matchedKey of matchedKeys) {
+              if (matchedKey.projectKey === repo.project?.key) {
                 const task = await this.prisma.task.findFirst({
                   where: {
                     orgId: repo.orgId,
@@ -155,7 +154,12 @@ export class GithubWebhookService {
                   },
                 });
 
-                if (task && task.status !== 'DONE') {
+                if (task) {
+                  // Determine stalled status (>3 days without activity)
+                  const updatedAt = pr.updated_at ? new Date(pr.updated_at).getTime() : Date.now();
+                  const isStalled = action !== 'closed' && (Date.now() - updatedAt > 3 * 86400 * 1000);
+                  const prState = isMerged ? 'merged' : (action === 'closed' ? 'closed' : 'open');
+
                   const systemContext: TenantContext = {
                     orgId: repo.orgId,
                     userId: task.createdBy,
@@ -163,28 +167,42 @@ export class GithubWebhookService {
                     requestId: `webhook-pr-${pr.number}`,
                   };
 
-                  await createProposal(systemContext, repo.projectId, {
-                    title: `Mark ${task.title} as DONE (PR #${pr.number} Merged)`,
-                    description: `Automated proposal from merged GitHub PR #${pr.number}: "${title}" by @${pr.user?.login}.`,
-                    kind: 'STATUS_CHANGE',
-                    payload: {
-                      tasksToUpdate: [
-                        {
-                          taskId: task.id,
-                          status: 'DONE',
-                          expectedVersion: task.version,
-                        },
-                      ],
-                    },
+                  // 1. Persist GitHub PR Evidence in task_github_links
+                  await linkPrToTask(systemContext, task.id, {
+                    prNumber: pr.number,
+                    prTitle: pr.title || `PR #${pr.number}`,
+                    prUrl: pr.html_url || `https://github.com/pull/${pr.number}`,
+                    prBranch: pr.head?.ref || 'main',
+                    prState,
+                    isStalled,
                   });
-                  proposalCreated = true;
-                  this.logger.log(`Created STATUS_CHANGE proposal for task ${task.id} from merged PR #${pr.number}`);
+                  this.logger.log(`Linked PR #${pr.number} (state=${prState}, stalled=${isStalled}) to task ${task.id}`);
+
+                  // 2. If PR is merged and references project tasks, suggest status change via human-reviewable Proposal
+                  if (action === 'closed' && isMerged && task.status !== 'DONE') {
+                    await createProposal(systemContext, repo.projectId, {
+                      title: `Mark ${task.title} as DONE (PR #${pr.number} Merged)`,
+                      description: `Automated proposal from merged GitHub PR #${pr.number}: "${title}" by @${pr.user?.login}.`,
+                      kind: 'STATUS_CHANGE',
+                      payload: {
+                        tasksToUpdate: [
+                          {
+                            taskId: task.id,
+                            status: 'DONE',
+                            expectedVersion: task.version,
+                          },
+                        ],
+                      },
+                    });
+                    proposalCreated = true;
+                    this.logger.log(`Created STATUS_CHANGE proposal for task ${task.id} from merged PR #${pr.number}`);
+                  }
                 }
               }
             }
           }
-        } catch (proposalErr) {
-          this.logger.warn(`Failed to stage PR proposal: ${proposalErr}`);
+        } catch (prErr) {
+          this.logger.warn(`Failed to process PR evidence or proposal: ${prErr}`);
         }
       }
 

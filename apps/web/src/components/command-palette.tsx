@@ -129,13 +129,13 @@ export function CommandPalette({
   );
 
   return (
-    <div className="fixed inset-0 z-50 flex items-start justify-center pt-16 sm:pt-24 px-4 bg-black/60 backdrop-blur-sm animate-fadeIn">
+    <div className="fixed inset-0 z-50 flex items-start justify-center pt-16 sm:pt-24 px-4 bg-black/60 dark:bg-black/80 backdrop-blur-sm animate-fadeIn">
       {/* Click outside to dismiss */}
       <div className="fixed inset-0" onClick={onClose} />
 
-      <div className="relative w-full max-w-xl bg-white rounded-2xl shadow-modal border border-slate-200 overflow-hidden flex flex-col max-h-[80vh] z-10">
+      <div className="relative w-full max-w-xl bg-white dark:bg-slate-900 rounded-2xl shadow-modal border border-slate-200 dark:border-slate-800 overflow-hidden flex flex-col max-h-[80vh] z-10 transition-colors">
         {/* Search Input Bar */}
-        <div className="flex items-center gap-3 px-4 py-3.5 border-b border-slate-200 bg-slate-50/60">
+        <div className="flex items-center gap-3 px-4 py-3.5 border-b border-slate-200 dark:border-slate-800 bg-slate-50/60 dark:bg-slate-800/60">
           <SearchIcon className="w-4 h-4 text-slate-400 shrink-0" />
           <input
             ref={inputRef}
@@ -143,18 +143,18 @@ export function CommandPalette({
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder="Type a command or search tasks, projects..."
-            className="flex-1 bg-transparent text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none"
+            className="flex-1 bg-transparent text-sm text-slate-900 dark:text-slate-100 placeholder:text-slate-400 focus:outline-none"
           />
           {query && (
             <button
               type="button"
               onClick={() => setQuery('')}
-              className="p-1 rounded-md text-slate-400 hover:text-slate-600"
+              className="p-1 rounded-md text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
             >
               <XIcon className="w-3.5 h-3.5" />
             </button>
           )}
-          <kbd className="px-1.5 py-0.5 text-[10px] font-mono text-slate-400 bg-white border border-slate-200 rounded shadow-xs">
+          <kbd className="px-1.5 py-0.5 text-[10px] font-mono text-slate-400 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded shadow-xs">
             ESC
           </kbd>
         </div>
@@ -164,7 +164,7 @@ export function CommandPalette({
           {/* Work Items / Tasks */}
           {filteredTasks.length > 0 && (
             <div className="space-y-1">
-              <div className="px-2 py-1 text-[10px] font-bold uppercase tracking-wider text-slate-400">
+              <div className="px-2 py-1 text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">
                 Work Items
               </div>
               {filteredTasks.map((task) => (
@@ -175,19 +175,19 @@ export function CommandPalette({
                     onSelectTask(task);
                     onClose();
                   }}
-                  className="w-full flex items-center justify-between px-3 py-2 rounded-lg hover:bg-slate-100 text-left transition-colors group"
+                  className="w-full flex items-center justify-between px-3 py-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 text-left transition-colors group"
                 >
                   <div className="flex items-center gap-2.5 truncate">
-                    <span className="font-mono text-xs font-bold text-slate-500 bg-slate-100 px-1.5 py-0.5 rounded border border-slate-200">
+                    <span className="font-mono text-xs font-bold text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-slate-800 px-1.5 py-0.5 rounded border border-slate-200 dark:border-slate-700">
                       #{task.number}
                     </span>
-                    <span className="text-xs font-medium text-slate-900 group-hover:text-blue-600 truncate">
+                    <span className="text-xs font-medium text-slate-900 dark:text-slate-100 group-hover:text-blue-600 dark:group-hover:text-sky-400 truncate">
                       {task.title}
                     </span>
                   </div>
                   <div className="flex items-center gap-2 shrink-0 text-[10px]">
                     <span className="font-mono text-slate-400">{task.status}</span>
-                    <ArrowRightIcon className="w-3 h-3 text-slate-300 group-hover:text-blue-500" />
+                    <ArrowRightIcon className="w-3 h-3 text-slate-300 dark:text-slate-600 group-hover:text-blue-500 dark:group-hover:text-sky-400" />
                   </div>
                 </button>
               ))}
@@ -197,7 +197,7 @@ export function CommandPalette({
           {/* Projects */}
           {filteredProjects.length > 0 && (
             <div className="space-y-1">
-              <div className="px-2 py-1 text-[10px] font-bold uppercase tracking-wider text-slate-400">
+              <div className="px-2 py-1 text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">
                 Projects
               </div>
               {filteredProjects.map((project) => (
@@ -209,13 +209,13 @@ export function CommandPalette({
                     onNavigate('projects');
                     onClose();
                   }}
-                  className="w-full flex items-center justify-between px-3 py-2 rounded-lg hover:bg-slate-100 text-left transition-colors group"
+                  className="w-full flex items-center justify-between px-3 py-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 text-left transition-colors group"
                 >
                   <div className="flex items-center gap-2.5 truncate">
-                    <span className="font-mono text-xs font-bold bg-blue-50 text-blue-700 px-1.5 py-0.5 rounded border border-blue-200">
+                    <span className="font-mono text-xs font-bold bg-blue-50 dark:bg-blue-950/40 text-blue-700 dark:text-blue-300 px-1.5 py-0.5 rounded border border-blue-200 dark:border-blue-800">
                       {project.key}
                     </span>
-                    <span className="text-xs font-medium text-slate-900 group-hover:text-blue-600 truncate">
+                    <span className="text-xs font-medium text-slate-900 dark:text-slate-100 group-hover:text-blue-600 dark:group-hover:text-sky-400 truncate">
                       {project.name}
                     </span>
                   </div>
@@ -230,7 +230,7 @@ export function CommandPalette({
           {/* Navigation Destinations */}
           {filteredNav.length > 0 && (
             <div className="space-y-1">
-              <div className="px-2 py-1 text-[10px] font-bold uppercase tracking-wider text-slate-400">
+              <div className="px-2 py-1 text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">
                 Navigation
               </div>
               {filteredNav.map((nav) => (
@@ -241,20 +241,20 @@ export function CommandPalette({
                     onNavigate(nav.section);
                     onClose();
                   }}
-                  className="w-full flex items-center justify-between px-3 py-2 rounded-lg hover:bg-slate-100 text-left transition-colors group"
+                  className="w-full flex items-center justify-between px-3 py-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 text-left transition-colors group"
                 >
                   <div className="flex items-center gap-2.5">
                     {nav.icon}
                     <div>
-                      <div className="text-xs font-medium text-slate-900 group-hover:text-blue-600">
+                      <div className="text-xs font-medium text-slate-900 dark:text-slate-100 group-hover:text-blue-600 dark:group-hover:text-sky-400">
                         {nav.title}
                       </div>
-                      <div className="text-[10px] text-slate-400">
+                      <div className="text-[10px] text-slate-400 dark:text-slate-500">
                         {nav.description}
                       </div>
                     </div>
                   </div>
-                  <ArrowRightIcon className="w-3 h-3 text-slate-300 group-hover:text-blue-500" />
+                  <ArrowRightIcon className="w-3 h-3 text-slate-300 dark:text-slate-600 group-hover:text-blue-500 dark:group-hover:text-sky-400" />
                 </button>
               ))}
             </div>

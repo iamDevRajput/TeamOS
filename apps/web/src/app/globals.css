@@ -52,6 +52,52 @@
     --ring: 59 130 246; /* blue-500 */
   }
 
+  .dark {
+    /* Backgrounds & Surfaces (Plane-inspired deep dark canvas) */
+    --background: 13 15 18; /* #0d0f12 canvas */
+    --surface: 20 23 28; /* #14171c card / work-item surface */
+    --surface-secondary: 26 30 37; /* #1a1e25 sidebar */
+    --surface-tertiary: 35 41 51; /* #232933 popovers */
+
+    /* Foregrounds */
+    --foreground: 241 245 249; /* slate-100 */
+    --foreground-muted: 148 163 184; /* slate-400 */
+    --foreground-subtle: 100 116 139; /* slate-500 */
+
+    /* Borders */
+    --border: 39 45 56; /* #272d38 subtle dark border */
+    --border-hover: 55 65 81; /* slate-700 */
+    --border-strong: 71 85 105; /* slate-600 */
+
+    /* Brand / Primary Accent (Electric Sky / Cyan) */
+    --primary: 56 189 248; /* sky-400 */
+    --primary-hover: 14 165 233; /* sky-500 */
+    --primary-foreground: 13 15 18;
+    --primary-surface: 12 74 110; /* sky-950 */
+    --primary-border: 3 105 161; /* sky-700 */
+
+    /* Semantic: Health / Low Risk */
+    --success: 52 211 153; /* emerald-400 */
+    --success-surface: 6 78 59; /* emerald-900 / 30% */
+    --success-border: 4 120 87; /* emerald-700 */
+    --success-foreground: 167 243 208; /* emerald-200 */
+
+    /* Semantic: Warning / Medium Risk */
+    --warning: 251 191 36; /* amber-400 */
+    --warning-surface: 120 53 15; /* amber-900 / 30% */
+    --warning-border: 180 83 9; /* amber-700 */
+    --warning-foreground: 253 230 138; /* amber-200 */
+
+    /* Semantic: Danger / High Risk */
+    --danger: 248 113 113; /* red-400 */
+    --danger-surface: 127 29 29; /* red-900 / 30% */
+    --danger-border: 185 28 28; /* red-700 */
+    --danger-foreground: 254 202 202; /* red-200 */
+
+    /* Focus ring */
+    --ring: 56 189 248; /* sky-400 */
+  }
+
   * {
     border-color: rgb(var(--border));
   }
@@ -61,6 +107,10 @@
     text-rendering: optimizeLegibility;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
+  }
+
+  html.dark {
+    color-scheme: dark;
   }
 
   body {
@@ -82,6 +132,11 @@
     color: rgb(15, 23, 42);
   }
 
+  .dark ::selection {
+    background-color: rgba(56, 189, 248, 0.25);
+    color: rgb(241, 245, 249);
+  }
+
   /* Custom subtle scrollbars */
   ::-webkit-scrollbar {
     width: 6px;
@@ -96,6 +151,13 @@
   }
   ::-webkit-scrollbar-thumb:hover {
     background: rgb(148 163 184);
+  }
+
+  .dark ::-webkit-scrollbar-thumb {
+    background: rgb(55 65 81);
+  }
+  .dark ::-webkit-scrollbar-thumb:hover {
+    background: rgb(75 85 99);
   }
 }
 
