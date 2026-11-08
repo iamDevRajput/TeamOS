@@ -81,6 +81,11 @@ model User {
   aiReservations      AiBudgetReservation[]
   githubInstallations GithubInstallation[] @relation("GithubInstallationCreator")
   taskComments        TaskComment[]
+  createdMeetings     Meeting[]        @relation("MeetingCreator")
+  assignedMeetingProposals MeetingActionProposal[] @relation("ProposalAssignee")
+  notifications       Notification[]   @relation("UserNotifications")
+  actorNotifications  Notification[]   @relation("NotificationActor")
+  copilotMessages     CopilotMessage[]
 
   @@map("users")
 }
@@ -124,6 +129,12 @@ model Organization {
   taskComments        TaskComment[]
   taskGithubLinks     TaskGithubLink[]
   projectRiskHistory  ProjectRiskHistory[]
+  meetings            Meeting[]
+  transcriptSegments  TranscriptSegment[]
+  meetingActionProposals MeetingActionProposal[]
+  workspaceEmbeddings WorkspaceEmbedding[]
+  notifications       Notification[]
+  copilotMessages     CopilotMessage[]
 
   @@map("organizations")
 }
@@ -186,6 +197,10 @@ model Project {
   reports      ProjectReport[]
   githubRepositories GithubRepository[]
   riskHistory  ProjectRiskHistory[]
+  meetings     Meeting[]
+  meetingActionProposals MeetingActionProposal[]
+  workspaceEmbeddings WorkspaceEmbedding[]
+  copilotMessages CopilotMessage[]
 
   @@unique([orgId, id])
   @@unique([orgId, key])
@@ -219,6 +234,7 @@ model Task {
   blocks       TaskDependency[] @relation("BlockerTask")
   comments     TaskComment[]
   githubLinks  TaskGithubLink[]
+  convertedMeetingProposals MeetingActionProposal[] @relation("MeetingProposalConvertedTask")
 
   @@unique([orgId, id])
   @@unique([orgId, projectId, number])
@@ -490,4 +506,137 @@ model ProjectRiskHistory {
   @@unique([orgId, projectId, snapshotDate], map: "uq_project_risk_history_org_project_date")
   @@index([orgId, projectId, snapshotDate], map: "project_risk_history_lookup_idx")
   @@map("project_risk_history")
+}
+
+model Meeting {
+  id              String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  orgId           String   @map("org_id") @db.Uuid
+  projectId       String   @map("project_id") @db.Uuid
+  title           String
+  meetingDate     DateTime @default(now()) @map("meeting_date") @db.Timestamptz(6)
+  participants    String[] @default([])
+  audioUrl        String?  @map("audio_url")
+  transcript      String?  @db.Text
+  status          String   @default("COMPLETED")
+  createdByUserId String?  @map("created_by_user_id") @db.Uuid
+  createdAt       DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt       DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  organization    Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  project         Project      @relation(fields: [orgId, projectId], references: [orgId, id], onDelete: Cascade)
+  createdByUser   User?        @relation("MeetingCreator", fields: [createdByUserId], references: [id], onDelete: SetNull)
+
+  transcriptSegments TranscriptSegment[]
+  actionProposals    MeetingActionProposal[]
+
+  @@unique([orgId, id], map: "uq_meetings_org_id")
+  @@index([orgId, projectId, meetingDate(sort: Desc)])
+  @@map("meetings")
+}
+
+model TranscriptSegment {
+  id               String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  orgId            String   @map("org_id") @db.Uuid
+  meetingId        String   @map("meeting_id") @db.Uuid
+  speaker          String
+  startTimeSeconds Float    @map("start_time_seconds")
+  endTimeSeconds   Float    @map("end_time_seconds")
+  text             String   @db.Text
+  createdAt        DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  organization Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  meeting      Meeting      @relation(fields: [orgId, meetingId], references: [orgId, id], onDelete: Cascade)
+
+  @@unique([orgId, id], map: "uq_transcript_segments_org_id")
+  @@index([orgId, meetingId])
+  @@map("transcript_segments")
+}
+
+model MeetingActionProposal {
+  id                  String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  orgId               String    @map("org_id") @db.Uuid
+  projectId           String    @map("project_id") @db.Uuid
+  meetingId           String    @map("meeting_id") @db.Uuid
+  actionItem          String    @map("action_item") @db.Text
+  suggestedAssigneeId String?   @map("suggested_assignee_id") @db.Uuid
+  suggestedDeadline   DateTime? @map("suggested_deadline") @db.Timestamptz(6)
+  confidence          Float     @default(0.9)
+  supportingEvidence  String?   @map("supporting_evidence") @db.Text
+  status              String    @default("PENDING")
+  convertedTaskId     String?   @map("converted_task_id") @db.Uuid
+  createdAt           DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt           DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  organization      Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  project           Project      @relation(fields: [orgId, projectId], references: [orgId, id], onDelete: Cascade)
+  meeting           Meeting      @relation(fields: [orgId, meetingId], references: [orgId, id], onDelete: Cascade)
+  suggestedAssignee User?        @relation("ProposalAssignee", fields: [suggestedAssigneeId], references: [id], onDelete: SetNull)
+  convertedTask     Task?        @relation("MeetingProposalConvertedTask", fields: [orgId, convertedTaskId], references: [orgId, id], onDelete: SetNull)
+
+  @@unique([orgId, id], map: "uq_meeting_action_proposals_org_id")
+  @@index([orgId, meetingId, status])
+  @@map("meeting_action_proposals")
+}
+
+model WorkspaceEmbedding {
+  id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  orgId       String   @map("org_id") @db.Uuid
+  projectId   String?  @map("project_id") @db.Uuid
+  sourceType  String   @map("source_type")
+  sourceId    String   @map("source_id") @db.Uuid
+  chunkIndex  Int      @default(0) @map("chunk_index")
+  contentText String   @map("content_text") @db.Text
+  embedding   Unsupported("vector(768)")?
+  metadata    Json     @default("{}")
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt   DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  organization Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  project      Project?     @relation(fields: [orgId, projectId], references: [orgId, id], onDelete: Cascade)
+
+  @@unique([orgId, id], map: "uq_workspace_embeddings_org_id")
+  @@index([orgId, projectId, sourceType])
+  @@map("workspace_embeddings")
+}
+
+model Notification {
+  id         String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  orgId      String    @map("org_id") @db.Uuid
+  userId     String    @map("user_id") @db.Uuid
+  actorId    String?   @map("actor_id") @db.Uuid
+  type       String
+  title      String
+  body       String
+  entityType String    @map("entity_type")
+  entityId   String    @map("entity_id") @db.Uuid
+  readAt     DateTime? @map("read_at") @db.Timestamptz(6)
+  createdAt  DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  organization Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  user         User         @relation("UserNotifications", fields: [userId], references: [id], onDelete: Cascade)
+  actor        User?        @relation("NotificationActor", fields: [actorId], references: [id], onDelete: SetNull)
+
+  @@unique([orgId, id], map: "uq_notifications_org_id")
+  @@index([orgId, userId, readAt, createdAt(sort: Desc)])
+  @@map("notifications")
+}
+
+model CopilotMessage {
+  id                String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  orgId             String   @map("org_id") @db.Uuid
+  projectId         String   @map("project_id") @db.Uuid
+  userId            String   @map("user_id") @db.Uuid
+  role              String
+  content           String   @db.Text
+  simulationPayload Json?    @map("simulation_payload")
+  citations         Json     @default("[]")
+  createdAt         DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  organization Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  project      Project      @relation(fields: [orgId, projectId], references: [orgId, id], onDelete: Cascade)
+  user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([orgId, id], map: "uq_copilot_messages_org_id")
+  @@index([orgId, projectId, createdAt(sort: Asc)])
+  @@map("copilot_messages")
 }

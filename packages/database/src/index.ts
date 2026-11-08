@@ -114,6 +114,48 @@ export {
 } from "./github";
 export type { SaveInstallationParams } from "./github";
 
+export {
+  createMeeting,
+  listMeetings,
+  getMeetingById,
+  addTranscriptSegments,
+  addMeetingActionProposals,
+  updateMeetingActionProposalStatus,
+} from "./meetings";
+export type {
+  CreateMeetingParams,
+  CreateTranscriptSegmentParams,
+  CreateActionProposalParams,
+} from "./meetings";
+
+export {
+  upsertWorkspaceEmbedding,
+  searchWorkspaceEmbeddings,
+  findSimilarTasks,
+  deleteWorkspaceEmbedding,
+} from "./embeddings";
+export type {
+  UpsertEmbeddingParams,
+  SearchEmbeddingParams,
+  SimilarTaskResult,
+} from "./embeddings";
+
+export {
+  createNotification,
+  listNotifications,
+  markNotificationRead,
+  markAllNotificationsRead,
+  getUnreadNotificationCount,
+} from "./notifications";
+export type { CreateNotificationParams } from "./notifications";
+
+export {
+  recordCopilotMessage,
+  listCopilotMessages,
+  clearCopilotHistory,
+} from "./copilot";
+export type { RecordCopilotMessageParams } from "./copilot";
+
 // Re-export safe types and enums from Prisma Client
 export { TaskStatus, TaskPriority, ActorType, OutboxStatus, OrgRole, ProposalKind, ProposalState, AiReservationState, Prisma } from "@prisma/client";
 
@@ -133,4 +175,10 @@ export type {
   GithubInstallation,
   GithubRepository,
   GithubWebhookDelivery,
+  Meeting,
+  TranscriptSegment,
+  MeetingActionProposal,
+  WorkspaceEmbedding,
+  Notification,
+  CopilotMessage,
 } from "@prisma/client";

@@ -560,3 +560,207 @@ export interface LinkGithubRepoToProjectDto {
   projectId: string;
 }
 
+// ---------------------------------------------------------------------------
+// Real-time Collaboration & Presence
+// ---------------------------------------------------------------------------
+
+export interface PresenceUserDto {
+  userId: string;
+  login: string;
+  displayName?: string;
+  avatarUrl?: string;
+  lastActiveAt: string;
+  currentPath?: string;
+  taskId?: string;
+}
+
+export interface WebSocketEventMessage<T = unknown> {
+  event: string;
+  payload: T;
+  timestamp: string;
+  room?: string;
+}
+
+// ---------------------------------------------------------------------------
+// Meeting Intelligence & Action Item Extraction
+// ---------------------------------------------------------------------------
+
+export type MeetingStatus = 'PROCESSING' | 'COMPLETED' | 'FAILED';
+export type MeetingActionProposalStatus = 'PENDING' | 'CONVERTED' | 'DISMISSED';
+
+export interface TranscriptSegmentDto {
+  id: string;
+  meetingId: string;
+  speaker: string;
+  startTimeSeconds: number;
+  endTimeSeconds: number;
+  text: string;
+  createdAt: string;
+}
+
+export interface MeetingActionProposalDto {
+  id: string;
+  orgId: string;
+  projectId: string;
+  meetingId: string;
+  actionItem: string;
+  suggestedAssigneeId?: string;
+  suggestedAssigneeName?: string;
+  suggestedDeadline?: string;
+  confidence: number;
+  supportingEvidence?: string;
+  status: MeetingActionProposalStatus;
+  convertedTaskId?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface MeetingDto {
+  id: string;
+  orgId: string;
+  projectId: string;
+  title: string;
+  meetingDate: string;
+  participants: string[];
+  audioUrl?: string;
+  transcript?: string;
+  status: string;
+  createdByUserId?: string;
+  createdAt: string;
+  updatedAt: string;
+  segments?: TranscriptSegmentDto[];
+  proposals?: MeetingActionProposalDto[];
+}
+
+export interface CreateMeetingDto {
+  title: string;
+  meetingDate?: string;
+  participants?: string[];
+  audioUrl?: string;
+  transcript?: string;
+}
+
+export interface ConvertProposalToTaskDto {
+  title?: string;
+  priority?: TaskPriority;
+  assigneeId?: string;
+  remainingEstimateWorkdays?: number;
+  dueDate?: string;
+}
+
+// ---------------------------------------------------------------------------
+// Semantic Search & RAG
+// ---------------------------------------------------------------------------
+
+export type EmbeddingSourceType = 'TASK' | 'COMMENT' | 'MEETING' | 'REPORT';
+
+export interface SemanticSearchResultDto {
+  id: string;
+  sourceType: EmbeddingSourceType;
+  sourceId: string;
+  projectId?: string;
+  title: string;
+  snippet: string;
+  score: number;
+  metadata?: Record<string, unknown>;
+}
+
+export interface SemanticSearchQueryDto {
+  query: string;
+  projectId?: string;
+  limit?: number;
+}
+
+// ---------------------------------------------------------------------------
+// Semantic Duplicate Work Detection
+// ---------------------------------------------------------------------------
+
+export interface DuplicateTaskCandidateDto {
+  taskId: string;
+  number: number;
+  title: string;
+  status: TaskStatus;
+  similarityScore: number;
+  reason: string;
+}
+
+export interface DuplicateCheckRequestDto {
+  title: string;
+  description?: string;
+  excludeTaskId?: string;
+}
+
+// ---------------------------------------------------------------------------
+// Notifications & Deadline Automation
+// ---------------------------------------------------------------------------
+
+export type NotificationType =
+  | 'DEADLINE_APPROACHING'
+  | 'TASK_BLOCKED'
+  | 'PROPOSAL_CREATED'
+  | 'COMMENT_ADDED'
+  | 'COPILOT_ALERT'
+  | 'RISK_SPIKE';
+
+export interface NotificationDto {
+  id: string;
+  orgId: string;
+  userId: string;
+  actorId?: string;
+  actorName?: string;
+  type: NotificationType;
+  title: string;
+  body: string;
+  entityType: string;
+  entityId: string;
+  readAt?: string | null;
+  createdAt: string;
+}
+
+// ---------------------------------------------------------------------------
+// TeamOS AI Copilot & Simulation
+// ---------------------------------------------------------------------------
+
+export type CopilotRole = 'user' | 'assistant' | 'system';
+
+export interface CopilotCitationDto {
+  type: 'task' | 'meeting' | 'risk' | 'dependency';
+  id: string;
+  title: string;
+  snippet?: string;
+}
+
+export interface CopilotSimulationResultDto {
+  simulatedDelayDays: number;
+  targetTaskId: string;
+  targetTaskTitle: string;
+  originalForecastDate: string;
+  newForecastDate: string;
+  scheduleVarianceChangeDays: number;
+  impactedTasks: Array<{
+    id: string;
+    number: number;
+    title: string;
+    slackChangeDays: number;
+    newlyCritical: boolean;
+  }>;
+  recommendation: string;
+}
+
+export interface CopilotMessageDto {
+  id: string;
+  orgId: string;
+  projectId: string;
+  userId: string;
+  role: CopilotRole;
+  content: string;
+  simulationPayload?: CopilotSimulationResultDto | null;
+  citations: CopilotCitationDto[];
+  createdAt: string;
+}
+
+export interface CopilotChatRequestDto {
+  message: string;
+  projectId: string;
+}
+

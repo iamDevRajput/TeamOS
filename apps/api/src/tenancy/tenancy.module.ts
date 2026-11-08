@@ -1,10 +1,11 @@
-import { Module } from '@nestjs/common';
+import { Module, Global } from '@nestjs/common';
 import { IdentityModule } from '../identity/identity.module';
 import { TenancyService } from './tenancy.service';
 import { OrgsController } from './orgs.controller';
 import { InvitationsController } from './invitations.controller';
 import { OrgMembershipGuard } from './guards/org-membership.guard';
 
+@Global()
 @Module({
   imports: [IdentityModule],
   controllers: [OrgsController, InvitationsController],

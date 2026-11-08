@@ -15,6 +15,7 @@ import { DependencyGraph } from './dependency-graph';
 import { RiskOverviewPanel } from './risk-overview-panel';
 import { ProposalsPanel } from './proposals-panel';
 import { ReportsPanel } from './reports-panel';
+import { MeetingsPanel } from './meetings-panel';
 import { GetStartedChecklist } from './get-started-checklist';
 import {
   CalendarIcon,
@@ -39,6 +40,7 @@ export type ProjectTab =
   | 'risk'
   | 'proposals'
   | 'reports'
+  | 'meetings'
   | 'get-started';
 
 interface ProjectWorkspaceProps {
@@ -317,6 +319,18 @@ export function ProjectWorkspace({
             <FileTextIcon className="w-3.5 h-3.5" />
             <span>Health Reports</span>
           </button>
+
+          <button
+            type="button"
+            onClick={() => setActiveTab('meetings')}
+            className={`pb-2 px-3 border-b-2 transition-all whitespace-nowrap flex items-center gap-1.5 ${
+              activeTab === 'meetings'
+                ? 'border-blue-600 dark:border-sky-400 text-blue-600 dark:text-sky-400 font-bold'
+                : 'border-transparent text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200'
+            }`}
+          >
+            <span>🎙️ Meetings</span>
+          </button>
         </div>
       </div>
 
@@ -466,6 +480,15 @@ export function ProjectWorkspace({
           orgId={orgId}
           projectId={project.id}
           apiBaseUrl={apiBaseUrl}
+        />
+      )}
+
+      {activeTab === 'meetings' && (
+        <MeetingsPanel
+          orgId={orgId}
+          projectId={project.id}
+          projectName={project.name}
+          onTaskCreated={onRefreshProject}
         />
       )}
     </div>

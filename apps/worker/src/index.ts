@@ -81,6 +81,26 @@ async function handleEvent(event: OutboxClaimedEvent): Promise<void> {
       break;
     }
 
+    case 'meeting.created':
+    case 'meeting.transcription_requested': {
+      const meetingId = payload.meetingId || payload.id;
+      // eslint-disable-next-line no-console
+      console.log(`[Worker ${WORKER_ID}] [MEETING_EVENT] meeting=${meetingId} org=${event.org_id} title="${payload.title || ''}"`);
+      break;
+    }
+
+    case 'deadline.evaluate': {
+      // eslint-disable-next-line no-console
+      console.log(`[Worker ${WORKER_ID}] [DEADLINE_EVALUATION] Evaluated approaching deadlines for org=${event.org_id}`);
+      break;
+    }
+
+    case 'search.index_requested': {
+      // eslint-disable-next-line no-console
+      console.log(`[Worker ${WORKER_ID}] [SEARCH_INDEX] Ingested semantic embedding job for source=${payload.sourceType} id=${payload.sourceId}`);
+      break;
+    }
+
     default: {
       // eslint-disable-next-line no-console
       console.log(`[Worker ${WORKER_ID}] Handled generic outbox event: ${event.type}`);

@@ -10,6 +10,12 @@ import { ProposalsModule } from './proposals/proposals.module';
 import { AiModule } from './ai/ai.module';
 import { GithubModule } from './github/github.module';
 import { ReportsModule } from './reports/reports.module';
+import { CollaborationModule } from './collaboration/collaboration.module';
+import { MeetingsModule } from './meetings/meetings.module';
+import { SearchModule } from './search/search.module';
+import { NotificationsModule } from './notifications/notifications.module';
+import { CopilotModule } from './copilot/copilot.module';
+import { DemoModule } from './demo/demo.module';
 import { CsrfValidationMiddleware } from './common/csrf.middleware';
 
 @Module({
@@ -25,6 +31,12 @@ import { CsrfValidationMiddleware } from './common/csrf.middleware';
     AiModule,
     GithubModule,
     ReportsModule,
+    CollaborationModule,
+    MeetingsModule,
+    SearchModule,
+    NotificationsModule,
+    CopilotModule,
+    DemoModule,
   ],
 })
 export class AppModule implements NestModule {

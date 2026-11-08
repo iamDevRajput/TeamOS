@@ -23,12 +23,17 @@ TeamOS is designed from first principles as a modular monolith in a TypeScript m
 ## 2. Key Features
 
 - **Plane-Inspired 3-Panel Workspace:** A high-density SaaS interface featuring a compact global navigation rail, collapsible workspace & project sidebar, and main project workspace with segmented Work Items List and Kanban Board views.
-- **Global Search & Command Palette (`⌘K`):** Real-time keyboard-navigable search across tasks, projects, and administrative destinations.
+- **Real-Time Collaboration & Presence:** Native WebSocket gateway (`/ws`) providing live presence indicator dots, active task drawer viewing chips, and instant project-wide event broadcasts.
+- **Engineering Meeting Intelligence:** Audio transcript timelines with speaker attribution, AI-extracted action-item proposals, confidence ratings, cited transcript evidence, and 1-click human-reviewed task conversion.
+- **Workspace Embeddings & Hybrid RAG (`pgvector`):** 768-dimensional vector cosine similarity combined with full-text keyword indexing across tasks, transcripts, and comments, accessible via global Command Palette (`⌘K`).
+- **Semantic Duplicate Work Detection:** Real-time debounced checks during task creation flagging conceptual overlap (>= 65% cosine similarity) with plain-English rationales and merge guidance.
+- **Notifications & Deadline Automation:** Notification tray with unread pill badge, automated deadline-approaching evaluations, and live delivery risk spike banners.
+- **TeamOS AI Copilot & Natural-Language What-If Simulator (`⌘J`):** Grounded delivery assistant capable of calculating in-memory CPM schedule shifts, downstream impact trees, and 1-click mitigation proposals without mutating database state.
+- **Interactive Killer Demo Suite:** Pre-configured demo runner (`⚡ Demo Mode`) that instantly provisions an enterprise project, injects a 4-day backend delay, and demonstrates downstream risk propagation live.
 - **Multi-Tenant Organizations & RBAC:** Complete organizational workspaces isolated by PostgreSQL forced RLS. Role-Based Access Control (`OWNER`, `ADMIN`, `MEMBER`) with last-owner protection and secure invitation tokens.
 - **Project & Task Management:** Sequential per-project task numbering (`[KEY]-[NUM]`), status boards (Kanban & Table), assignees, remaining estimate tracking, and Optimistic Concurrency Control (OCC) using monotonic version checks (`HTTP 409 Conflict` on race conditions).
 - **Finish-to-Start Dependencies & DAG Visualizer:** Directed Acyclic Graph (DAG) task relationships. Multi-stage topological visualizer, visual `🔒 Blocked` badges, and cycle rejection before database insertion.
 - **Deterministic Critical Path Method (CPM):** Calculates forward pass (early start/finish), backward pass (late start/finish), total/free float (slack), and zero-slack critical paths without external services.
-- **What-If Simulation Sandbox:** Interactive in-memory scenario modeling. Allows engineering managers to test estimate changes, scope expansions, or schedule slippages without mutating the underlying database.
 - **AI-Assisted Planning Engine:** Transforms natural language engineering briefs into structured, DAG-verified task breakdown proposals using a Google Gemini provider abstraction.
 - **Proposal Review & Atomic Application:** Structured change sets (task creates, updates, deletes, dependency additions/removals) staged in `PENDING` status. Changes only mutate the project when an authorized administrator reviews the exact diff and approves.
 - **Evidence-Backed Health Reports:** Generates authoritative risk reports (Delivery Status, Critical Path, Blocked Tasks, Forecast Completion) where every claim cites verified entity IDs.

@@ -1,8 +1,8 @@
 'use client';
 
 import React, { useState } from 'react';
-import type { TaskDto, TaskStatus, TaskPriority, OrgMemberDto } from '@teamos/contracts';
-import { Modal, Input, Textarea, Select, Button } from './ui';
+import type { TaskDto, TaskStatus, TaskPriority, OrgMemberDto, DuplicateTaskCandidateDto } from '@teamos/contracts';
+import { Modal, Input, Textarea, Select, Button, Badge } from './ui';
 
 interface CreateTaskModalProps {
   isOpen: boolean;
@@ -36,6 +36,34 @@ export function CreateTaskModal({
   const [dueDate, setDueDate] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [duplicates, setDuplicates] = useState<DuplicateTaskCandidateDto[]>([]);
+
+  // Debounced duplicate detection
+  React.useEffect(() => {
+    if (!title.trim() || title.trim().length < 4) {
+      setDuplicates([]);
+      return;
+    }
+
+    const handler = setTimeout(async () => {
+      try {
+        const res = await fetch(`${apiBaseUrl}/api/v1/orgs/${orgId}/projects/${projectId}/tasks/check-duplicates`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+          body: JSON.stringify({ title: title.trim(), description: description.trim() }),
+        });
+        if (res.ok) {
+          const list: DuplicateTaskCandidateDto[] = await res.json();
+          setDuplicates(list);
+        }
+      } catch {
+        // ignore duplicate check errors
+      }
+    }, 400);
+
+    return () => clearTimeout(handler);
+  }, [title, description, apiBaseUrl, orgId, projectId]);
 
   React.useEffect(() => {
     if (isOpen) {
@@ -47,6 +75,7 @@ export function CreateTaskModal({
       setEstimate('3');
       setDueDate('');
       setError(null);
+      setDuplicates([]);
     }
   }, [isOpen, initialStatus]);
 
@@ -121,6 +150,20 @@ export function CreateTaskModal({
           onChange={(e) => setTitle(e.target.value)}
           placeholder="e.g. Implement deterministic critical path algorithm"
         />
+
+        {duplicates.length > 0 && (
+          <div className="p-3 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800/60 rounded-xl space-y-1">
+            <div className="flex items-center gap-1.5 text-xs font-bold text-amber-800 dark:text-amber-300">
+              <span>⚠️ Potential Duplicate Work Detected</span>
+              <Badge variant="warning" size="xs">
+                {Math.round(duplicates[0].similarityScore * 100)}% Match
+              </Badge>
+            </div>
+            <p className="text-[11px] text-amber-700 dark:text-amber-400">
+              {duplicates[0].reason}
+            </p>
+          </div>
+        )}
 
         <Textarea
           label="Description (Optional)"

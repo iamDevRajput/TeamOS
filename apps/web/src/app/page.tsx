@@ -9,8 +9,12 @@ import type {
   ProjectDto,
   TaskDto,
   TaskStatus,
+  NotificationDto,
+  PresenceUserDto,
 } from '@teamos/contracts';
 
+import { useWorkspaceSocket } from '../hooks/useWorkspaceSocket';
+import { CopilotDrawer } from '../components/copilot-drawer';
 import { NavigationRail, type NavigationSection } from '../components/navigation-rail';
 import { WorkspaceSidebar } from '../components/workspace-sidebar';
 import { TopHeader } from '../components/top-header';
@@ -83,6 +87,13 @@ export default function HomePage() {
   const [commandPaletteOpen, setCommandPaletteOpen] = useState(false);
   const [onboardingOpen, setOnboardingOpen] = useState(false);
   const [guidedTourOpen, setGuidedTourOpen] = useState(false);
+
+  // 5b. Real-time Collaboration, Notifications & Copilot State
+  const [copilotOpen, setCopilotOpen] = useState(false);
+  const [notifications, setNotifications] = useState<NotificationDto[]>([]);
+  const [unreadNotificationCount, setUnreadNotificationCount] = useState(0);
+  const [demoRunning, setDemoRunning] = useState(false);
+  const [liveRiskSpikeAlert, setLiveRiskSpikeAlert] = useState<{ title: string; body: string } | null>(null);
 
   // 6. Theme State (persisted with dark-first developer aesthetic)
   const [theme, setTheme] = useState<'light' | 'dark'>('dark');
@@ -275,6 +286,125 @@ export default function HomePage() {
     loadTasks();
   }, [sessionData, activeOrg?.id, selectedProjectId, refreshKey]);
 
+  // Step 6: Native WebSocket Collaboration & Presence Gateway
+  const { isConnected, collaborators } = useWorkspaceSocket({
+    orgId: activeOrg?.id || null,
+    projectId: selectedProjectId,
+    currentTaskId: selectedTask?.id || null,
+    onNotificationReceived: (newNotif) => {
+      setNotifications((prev) => [newNotif, ...prev]);
+      setUnreadNotificationCount((c) => c + 1);
+    },
+    onTaskUpdated: () => {
+      setRefreshKey((k) => k + 1);
+    },
+    onRiskAlert: (alertPayload: any) => {
+      setLiveRiskSpikeAlert({
+        title: '⚠️ Critical Path Delivery Delay Detected',
+        body: `Task #${alertPayload?.task?.number || 2} was delayed. Delivery forecast slipped to ${alertPayload?.risk?.forecastDeliveryDate}.`,
+      });
+      setRefreshKey((k) => k + 1);
+    },
+    onCopilotMessage: () => {
+      // auto-handled by Copilot drawer
+    },
+  });
+
+  // Step 7: Notifications Data Lifecycle
+  useEffect(() => {
+    if (!activeOrg?.id) return;
+    const orgId = activeOrg.id;
+
+    async function loadNotifications() {
+      try {
+        const [listRes, countRes] = await Promise.all([
+          fetch(`${API_BASE_URL}/api/v1/orgs/${orgId}/notifications?limit=25`, { credentials: 'include' }),
+          fetch(`${API_BASE_URL}/api/v1/orgs/${orgId}/notifications/unread-count`, { credentials: 'include' }),
+        ]);
+        if (listRes.ok) {
+          const list = await listRes.json();
+          setNotifications(list);
+        }
+        if (countRes.ok) {
+          const countData = await countRes.json();
+          setUnreadNotificationCount(countData.count || 0);
+        }
+      } catch {
+        // ignore
+      }
+    }
+
+    loadNotifications();
+  }, [activeOrg?.id, refreshKey]);
+
+  const handleMarkNotificationRead = async (id: string) => {
+    if (!activeOrg?.id) return;
+    try {
+      await fetch(`${API_BASE_URL}/api/v1/orgs/${activeOrg.id}/notifications/${id}/read`, {
+        method: 'POST',
+        credentials: 'include',
+      });
+      setNotifications((prev) => prev.map((n) => (n.id === id ? { ...n, readAt: new Date().toISOString() } : n)));
+      setUnreadNotificationCount((c) => Math.max(0, c - 1));
+    } catch {
+      // ignore
+    }
+  };
+
+  const handleMarkAllNotificationsRead = async () => {
+    if (!activeOrg?.id) return;
+    try {
+      await fetch(`${API_BASE_URL}/api/v1/orgs/${activeOrg.id}/notifications/read-all`, {
+        method: 'POST',
+        credentials: 'include',
+      });
+      setNotifications((prev) => prev.map((n) => ({ ...n, readAt: new Date().toISOString() })));
+      setUnreadNotificationCount(0);
+    } catch {
+      // ignore
+    }
+  };
+
+  const handleRunKillerDemo = async () => {
+    if (!activeOrg?.id) return;
+    const orgId = activeOrg.id;
+    setDemoRunning(true);
+    try {
+      const setupRes = await fetch(`${API_BASE_URL}/api/v1/orgs/${orgId}/demo/setup`, {
+        method: 'POST',
+        credentials: 'include',
+      });
+      if (setupRes.ok) {
+        const demoData = await setupRes.json();
+        setRefreshKey((k) => k + 1);
+        setSelectedProjectId(demoData.projectId);
+        setActiveSection('projects');
+
+        // Automatically trigger step-delay to show the killer delivery intelligence flow!
+        setTimeout(async () => {
+          try {
+            const delayRes = await fetch(`${API_BASE_URL}/api/v1/orgs/${orgId}/demo/step-delay`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              credentials: 'include',
+              body: JSON.stringify({ projectId: demoData.projectId }),
+            });
+            if (delayRes.ok) {
+              setRefreshKey((k) => k + 1);
+              setCopilotOpen(true);
+            }
+          } catch {
+            // ignore
+          }
+        }, 1500);
+      }
+    } catch {
+      // ignore
+    } finally {
+      setDemoRunning(false);
+    }
+  };
+
   // ==========================================
   // Global Keyboard Shortcuts (Phase 9)
   // ==========================================
@@ -284,6 +414,13 @@ export default function HomePage() {
       if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
         e.preventDefault();
         setCommandPaletteOpen((prev) => !prev);
+        return;
+      }
+
+      // 1b. Command + J or Ctrl + J -> Open TeamOS Copilot
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'j') {
+        e.preventDefault();
+        setCopilotOpen((prev) => !prev);
         return;
       }
 
@@ -606,6 +743,17 @@ export default function HomePage() {
               : undefined
           }
           theme={theme}
+          collaborators={collaborators}
+          notifications={notifications}
+          unreadNotificationCount={unreadNotificationCount}
+          onMarkNotificationRead={handleMarkNotificationRead}
+          onMarkAllNotificationsRead={handleMarkAllNotificationsRead}
+          onOpenCopilot={() => setCopilotOpen(true)}
+          onRunKillerDemo={handleRunKillerDemo}
+          onSelectTask={(taskId) => {
+            const found = tasks.find((t) => t.id === taskId);
+            if (found) setSelectedTask(found);
+          }}
           onToggleTheme={handleToggleTheme}
           onOpenOnboarding={() => setOnboardingOpen(true)}
           onOpenSearch={() => setCommandPaletteOpen(true)}
@@ -615,6 +763,34 @@ export default function HomePage() {
           isSidebarCollapsed={isSidebarCollapsed}
           onLogout={handleLogout}
         />
+
+        {/* Live Risk Spike Alert Banner */}
+        {liveRiskSpikeAlert && (
+          <div className="mx-3 sm:mx-5 lg:mx-6 mt-3 p-3.5 bg-rose-500/10 border border-rose-500/30 rounded-xl flex items-center justify-between gap-3 text-xs text-rose-700 dark:text-rose-300 animate-in fade-in slide-in-from-top-2">
+            <div className="flex items-center gap-2">
+              <span className="text-base">⚠️</span>
+              <div>
+                <strong className="font-bold">{liveRiskSpikeAlert.title}</strong> — {liveRiskSpikeAlert.body}
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => setCopilotOpen(true)}
+                className="px-2.5 py-1 bg-rose-600 hover:bg-rose-700 text-white font-semibold rounded-lg text-[11px] transition-colors"
+              >
+                Inspect in Copilot
+              </button>
+              <button
+                type="button"
+                onClick={() => setLiveRiskSpikeAlert(null)}
+                className="text-rose-400 hover:text-rose-600 dark:hover:text-rose-200 text-sm p-1"
+              >
+                ✕
+              </button>
+            </div>
+          </div>
+        )}
 
         {/* Main Content Workspace */}
         <main className="flex-1 overflow-y-auto p-3 sm:p-5 lg:p-6">
@@ -1016,6 +1192,10 @@ export default function HomePage() {
         onClose={() => setCommandPaletteOpen(false)}
         tasks={tasks}
         projects={projects}
+        orgId={activeOrg?.id}
+        apiBaseUrl={API_BASE_URL}
+        onOpenCopilot={() => setCopilotOpen(true)}
+        onRunKillerDemo={handleRunKillerDemo}
         onSelectTask={(task) => setSelectedTask(task)}
         onSelectProject={(projectId) => {
           setSelectedProjectId(projectId);
@@ -1082,7 +1262,27 @@ export default function HomePage() {
           members={members}
           apiBaseUrl={API_BASE_URL}
           currentUserId={sessionData?.user?.id}
+          collaborators={collaborators}
           onUpdated={() => setRefreshKey((k) => k + 1)}
+        />
+      )}
+
+      {/* TeamOS AI Delivery Copilot Drawer */}
+      {activeOrg && selectedProject && (
+        <CopilotDrawer
+          isOpen={copilotOpen}
+          onClose={() => setCopilotOpen(false)}
+          orgId={activeOrg.id}
+          projectId={selectedProject.id}
+          projectName={selectedProject.name}
+          onOpenAiPlanner={() => {
+            setCopilotOpen(false);
+            setAiPlannerOpen(true);
+          }}
+          onSelectTask={(taskId) => {
+            const found = tasks.find((t) => t.id === taskId);
+            if (found) setSelectedTask(found);
+          }}
         />
       )}
 

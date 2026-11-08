@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import type { TaskDto, TaskStatus, TaskPriority, OrgMemberDto, DependencyDto } from '@teamos/contracts';
+import type { TaskDto, TaskStatus, TaskPriority, OrgMemberDto, DependencyDto, PresenceUserDto } from '@teamos/contracts';
 import { Input, Textarea, Select, Button, Badge, PriorityBadge } from './ui';
 import { AlertTriangleIcon, ClockIcon, LockIcon, XIcon, PlusIcon, FlameIcon } from './ui/icons';
 import { TaskComments } from './task-comments';
@@ -17,6 +17,7 @@ interface TaskDetailModalProps {
   apiBaseUrl: string;
   onUpdated: () => void;
   currentUserId?: string;
+  collaborators?: PresenceUserDto[];
 }
 
 export function TaskDetailModal({
@@ -30,6 +31,7 @@ export function TaskDetailModal({
   apiBaseUrl,
   onUpdated,
   currentUserId,
+  collaborators = [],
 }: TaskDetailModalProps) {
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
@@ -284,6 +286,18 @@ export function TaskDetailModal({
               </span>
               <PriorityBadge priority={priority} size="xs" />
               <span className="text-xs text-slate-400 font-mono">v{task.version}</span>
+              {collaborators.filter((c) => c.taskId === task.id && c.userId !== currentUserId).length > 0 && (
+                <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 text-[10px] text-emerald-700 dark:text-emerald-300 font-medium animate-pulse">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                  <span>
+                    {collaborators
+                      .filter((c) => c.taskId === task.id && c.userId !== currentUserId)
+                      .map((v) => v.displayName || v.login)
+                      .join(', ')}{' '}
+                    viewing now
+                  </span>
+                </div>
+              )}
             </div>
 
             <div className="flex items-center gap-2">

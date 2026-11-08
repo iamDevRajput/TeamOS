@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import type { AuthMeResponseDto, OrgDto } from '@teamos/contracts';
+import type { AuthMeResponseDto, OrgDto, PresenceUserDto, NotificationDto } from '@teamos/contracts';
 import {
   SearchIcon,
   SidebarIcon,
@@ -12,8 +12,11 @@ import {
   CommandIcon,
   SunIcon,
   MoonIcon,
+  ActivityIcon,
 } from './ui/icons';
 import { Badge } from './ui';
+import { CollaboratorsStrip } from './collaborators-strip';
+import { NotificationsTray } from './notifications-tray';
 
 interface TopHeaderProps {
   sessionData: AuthMeResponseDto;
@@ -21,6 +24,14 @@ interface TopHeaderProps {
   projectName?: string;
   sectionTitle?: string;
   theme?: 'light' | 'dark';
+  collaborators?: PresenceUserDto[];
+  notifications?: NotificationDto[];
+  unreadNotificationCount?: number;
+  onMarkNotificationRead?: (id: string) => void;
+  onMarkAllNotificationsRead?: () => void;
+  onOpenCopilot?: () => void;
+  onRunKillerDemo?: () => void;
+  onSelectTask?: (taskId: string) => void;
   onToggleTheme?: () => void;
   onOpenOnboarding?: () => void;
   onOpenGuidedTour?: () => void;
@@ -37,6 +48,14 @@ export function TopHeader({
   projectName,
   sectionTitle,
   theme = 'light',
+  collaborators = [],
+  notifications = [],
+  unreadNotificationCount = 0,
+  onMarkNotificationRead = () => {},
+  onMarkAllNotificationsRead = () => {},
+  onOpenCopilot,
+  onRunKillerDemo,
+  onSelectTask,
   onToggleTheme,
   onOpenOnboarding,
   onOpenGuidedTour,
@@ -101,6 +120,12 @@ export function TopHeader({
 
       {/* 3. Right: Utility actions & User Profile */}
       <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
+        {/* Collaborators Strip */}
+        <CollaboratorsStrip
+          collaborators={collaborators}
+          currentUserId={user.id || (user as any).userId}
+        />
+
         {/* Mobile Search Button */}
         <button
           type="button"
@@ -111,6 +136,42 @@ export function TopHeader({
         >
           <SearchIcon className="w-4 h-4" />
         </button>
+
+        {/* Notifications Tray */}
+        <NotificationsTray
+          notifications={notifications}
+          unreadCount={unreadNotificationCount}
+          onMarkRead={onMarkNotificationRead}
+          onMarkAllRead={onMarkAllNotificationsRead}
+          onSelectTask={onSelectTask}
+        />
+
+        {/* Killer Demo Runner Trigger */}
+        {onRunKillerDemo && (
+          <button
+            type="button"
+            onClick={onRunKillerDemo}
+            className="hidden sm:inline-flex items-center gap-1.5 px-2 py-1 text-xs font-semibold text-amber-700 dark:text-amber-300 bg-amber-50 dark:bg-amber-950/40 hover:bg-amber-100 dark:hover:bg-amber-900/50 border border-amber-200/80 dark:border-amber-800/80 rounded-lg transition-colors shadow-xs"
+            title="Run interactive Killer Demo: Delivery Risk & Delay Simulation"
+          >
+            <ActivityIcon className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400" />
+            <span>⚡ Demo Mode</span>
+          </button>
+        )}
+
+        {/* AI Copilot Quick Launcher */}
+        {onOpenCopilot && (
+          <button
+            type="button"
+            onClick={onOpenCopilot}
+            className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-semibold text-purple-700 dark:text-purple-300 bg-purple-50 dark:bg-purple-950/40 hover:bg-purple-100 dark:hover:bg-purple-900/50 border border-purple-200/80 dark:border-purple-800/80 rounded-lg transition-colors shadow-xs"
+            title="TeamOS AI Delivery Copilot (⌘J)"
+          >
+            <SparklesIcon className="w-3.5 h-3.5 text-purple-600 dark:text-purple-400" />
+            <span className="hidden md:inline">Copilot</span>
+            <kbd className="hidden lg:inline text-[9px] px-1 py-0.2 bg-purple-100 dark:bg-purple-900 rounded font-mono">⌘J</kbd>
+          </button>
+        )}
 
         {/* Guided Tour / Onboarding Launcher */}
         {onOpenOnboarding && (
@@ -141,16 +202,6 @@ export function TopHeader({
             )}
           </button>
         )}
-
-        {/* AI Assistant Quick Launcher */}
-        <button
-          type="button"
-          onClick={onOpenAiPlanner}
-          className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-semibold text-purple-700 dark:text-purple-300 bg-purple-50 dark:bg-purple-950/40 hover:bg-purple-100 dark:hover:bg-purple-900/50 border border-purple-200/80 dark:border-purple-800/80 rounded-lg transition-colors shadow-xs"
-        >
-          <SparklesIcon className="w-3.5 h-3.5 text-purple-600 dark:text-purple-400" />
-          <span className="hidden md:inline">AI Assistant</span>
-        </button>
 
         {/* Database Security Status Indicator */}
         <div
