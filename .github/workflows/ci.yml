@@ -10,6 +10,21 @@ jobs:
   validate:
     name: Lint, Typecheck, Test & Build
     runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: teamos_owner
+          POSTGRES_PASSWORD: teamos_owner_password
+          POSTGRES_DB: teamos
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 5
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -28,15 +43,43 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
+      - name: Bootstrap Database Roles
+        run: |
+          which psql >/dev/null 2>&1 || (sudo apt-get update && sudo apt-get install -y postgresql-client)
+          PGPASSWORD=teamos_owner_password psql -h localhost -p 5432 -U teamos_owner -d teamos -f infrastructure/docker/init-roles.sql
+
+      - name: Generate Prisma Client & Run Migrations
+        run: |
+          pnpm --filter=@teamos/database prisma:generate
+          pnpm --filter=@teamos/database prisma:migrate
+        env:
+          DATABASE_URL_MIGRATION: postgresql://teamos_owner:teamos_owner_password@localhost:5432/teamos?schema=public
+
+      - name: Build Shared Packages
+        run: |
+          pnpm --filter=@teamos/contracts build
+          pnpm --filter=@teamos/risk-engine build
+          pnpm --filter=@teamos/database build
+
       - name: Lint
         run: pnpm -r lint
 
       - name: Typecheck
         run: pnpm -r typecheck
 
-      - name: Unit Tests
+      - name: Tests
         run: pnpm -r test
+        env:
+          DATABASE_URL_MIGRATION: postgresql://teamos_owner:teamos_owner_password@localhost:5432/teamos?schema=public
+          DATABASE_URL: postgresql://teamos_api_role:teamos_api_password@localhost:5432/teamos?schema=public
+          DATABASE_URL_WORKER: postgresql://teamos_worker_role:teamos_worker_password@localhost:5432/teamos?schema=public
+          DATABASE_URL_IDENTITY: postgresql://teamos_identity_runtime:teamos_identity_password@localhost:5432/teamos?schema=public
+          NODE_ENV: test
 
-      - name: Build
-        run: pnpm -r build
-
+      - name: Build Applications
+        run: |
+          pnpm --filter=@teamos/api build
+          pnpm --filter=@teamos/worker build
+          pnpm --filter=@teamos/web build
+        env:
+          NEXT_PUBLIC_API_URL: http://localhost:3001
