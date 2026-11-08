@@ -11,7 +11,8 @@
     "clean": "rm -rf dist"
   },
   "dependencies": {
-    "@teamos/contracts": "workspace:*"
+    "@teamos/contracts": "workspace:*",
+    "@teamos/database": "workspace:*"
   },
   "devDependencies": {
     "@teamos/config": "workspace:*",

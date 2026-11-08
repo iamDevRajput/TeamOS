@@ -10,12 +10,13 @@
     "lint": "echo '@teamos/database lint pass'",
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate deploy",
-    "test": "vitest run",
+    "test": "vitest run --no-file-parallelism",
     "clean": "rm -rf dist"
   },
   "dependencies": {
     "@prisma/client": "^5.22.0",
-    "@teamos/contracts": "workspace:*"
+    "@teamos/contracts": "workspace:*",
+    "@teamos/risk-engine": "workspace:*"
   },
   "devDependencies": {
     "@teamos/config": "workspace:*",

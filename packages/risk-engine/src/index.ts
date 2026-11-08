@@ -17,6 +17,7 @@ export * from "./cpm";
 export * from "./impact";
 export * from "./what-if";
 export * from "./engine";
+export * from "./snapshot";
 
 /**
  * Validates that the finish-to-start dependency graph is a Directed Acyclic Graph (DAG).

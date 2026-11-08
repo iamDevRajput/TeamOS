@@ -13,11 +13,13 @@ import { InviteModal } from '../components/invite-modal';
 import { TransferOwnershipModal } from '../components/transfer-ownership-modal';
 import { MembersTable } from '../components/members-table';
 import { InvitationsPanel } from '../components/invitations-panel';
+import { AuditTimeline } from '../components/audit-timeline';
+import { ProjectsPanel } from '../components/projects-panel';
 
 const API_BASE_URL =
   process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
 
-type Tab = 'overview' | 'members' | 'invitations';
+type Tab = 'overview' | 'projects' | 'members' | 'invitations' | 'audit';
 
 export default function HomePage() {
   const [sessionData, setSessionData] = useState<AuthMeResponseDto | null>(null);
@@ -284,6 +286,17 @@ export default function HomePage() {
               </button>
               <button
                 type="button"
+                onClick={() => setActiveTab('projects')}
+                className={`pb-3 transition-colors border-b-2 ${
+                  activeTab === 'projects'
+                    ? 'border-blue-600 text-blue-600'
+                    : 'border-transparent text-slate-500 hover:text-slate-800'
+                }`}
+              >
+                Projects
+              </button>
+              <button
+                type="button"
                 onClick={() => setActiveTab('members')}
                 className={`pb-3 transition-colors border-b-2 ${
                   activeTab === 'members'
@@ -304,6 +317,19 @@ export default function HomePage() {
                   }`}
                 >
                   Invitations
+                </button>
+              )}
+              {canManageInvitations && (
+                <button
+                  type="button"
+                  onClick={() => setActiveTab('audit')}
+                  className={`pb-3 transition-colors border-b-2 ${
+                    activeTab === 'audit'
+                      ? 'border-blue-600 text-blue-600'
+                      : 'border-transparent text-slate-500 hover:text-slate-800'
+                  }`}
+                >
+                  Audit Log
                 </button>
               )}
             </div>
@@ -343,6 +369,15 @@ export default function HomePage() {
               </div>
             )}
 
+            {activeTab === 'projects' && (
+              <ProjectsPanel
+                orgId={activeOrg.id}
+                members={members}
+                currentUserRole={currentUserRole}
+                apiBaseUrl={API_BASE_URL}
+              />
+            )}
+
             {activeTab === 'members' && (
               <MembersTable
                 orgId={activeOrg.id}
@@ -361,6 +396,13 @@ export default function HomePage() {
                 apiBaseUrl={API_BASE_URL}
                 onOpenInviteModal={() => setInviteOpen(true)}
                 refreshKey={refreshKey}
+              />
+            )}
+
+            {activeTab === 'audit' && canManageInvitations && (
+              <AuditTimeline
+                orgId={activeOrg.id}
+                apiBaseUrl={API_BASE_URL}
               />
             )}
           </div>

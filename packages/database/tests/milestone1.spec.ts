@@ -43,6 +43,9 @@ describe("Milestone 1: Database Architecture, Multi-Tenant RLS & Outbox Lifecycl
     await ownerPool.query(`
       DELETE FROM public.outbox_events;
       DELETE FROM public.audit_events;
+      DELETE FROM public.github_repositories;
+      DELETE FROM public.github_installations;
+      DELETE FROM public.ai_budget_reservations;
       DELETE FROM public.task_dependencies;
       DELETE FROM public.tasks;
       DELETE FROM public.projects;

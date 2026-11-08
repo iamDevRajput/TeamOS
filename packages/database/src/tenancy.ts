@@ -8,7 +8,8 @@
  * - Forced RLS compatibility and transactional integrity.
  */
 
-import { PrismaClient, Prisma, Organization, Membership, OrgRole, Invitation } from '@prisma/client';
+import { PrismaClient, Prisma, Organization, Membership, OrgRole, Invitation, ActorType } from '@prisma/client';
+import { recordAuditEvent } from './audit';
 import {
   OrgDto,
   OrgMemberDto,
@@ -143,11 +144,18 @@ export async function getOrganizationMembership(
   orgId: string,
   userId: string,
 ): Promise<Membership | null> {
-  const rows = await prisma.$queryRaw<Membership[]>(
+  const rows = await prisma.$queryRaw<any[]>(
     Prisma.sql`SELECT * FROM public.check_membership(${orgId}::uuid, ${userId}::uuid)`
   );
 
-  return rows.length > 0 ? rows[0] : null;
+  if (rows.length === 0) return null;
+  const row = rows[0];
+  return {
+    orgId: row.org_id || row.orgId,
+    userId: row.user_id || row.userId,
+    role: row.role,
+    createdAt: row.created_at || row.createdAt,
+  } as Membership;
 }
 
 /**
@@ -238,10 +246,23 @@ export async function updateMemberRole(
       }
     }
 
-    return tx.membership.update({
+    const updated = await tx.membership.update({
       where: { orgId_userId: { orgId, userId: targetUserId } },
       data: { role: newRole },
     });
+
+    await recordAuditEvent(tx, {
+      orgId,
+      actorType: ActorType.USER,
+      actorId: effectiveCaller,
+      action: 'MEMBER_ROLE_UPDATED',
+      entityType: 'MEMBERSHIP',
+      entityId: targetUserId,
+      beforeData: { role: existing.role },
+      afterData: { role: newRole },
+    });
+
+    return updated;
   });
 }
 
@@ -277,6 +298,16 @@ export async function removeMember(
 
     await tx.membership.delete({
       where: { orgId_userId: { orgId, userId: targetUserId } },
+    });
+
+    await recordAuditEvent(tx, {
+      orgId,
+      actorType: ActorType.USER,
+      actorId: effectiveCaller,
+      action: 'MEMBER_REMOVED',
+      entityType: 'MEMBERSHIP',
+      entityId: targetUserId,
+      beforeData: { userId: targetUserId, role: existing.role },
     });
   });
 }
@@ -322,6 +353,17 @@ export async function transferOwnership(
       data: { role: OrgRole.ADMIN },
     });
 
+    await recordAuditEvent(tx, {
+      orgId,
+      actorType: ActorType.USER,
+      actorId: currentOwnerUserId,
+      action: 'OWNERSHIP_TRANSFERRED',
+      entityType: 'ORGANIZATION',
+      entityId: orgId,
+      beforeData: { ownerUserId: currentOwnerUserId },
+      afterData: { ownerUserId: newOwnerUserId },
+    });
+
     return { success: true };
   });
 }
@@ -341,7 +383,7 @@ export async function createInvitation(
   const expiresAt = new Date(Date.now() + ttlDays * 86400 * 1000);
 
   return withTenantContext(prisma, orgId, creatorUserId, async (tx) => {
-    return tx.invitation.create({
+    const inv = await tx.invitation.create({
       data: {
         orgId,
         tokenHash,
@@ -351,6 +393,18 @@ export async function createInvitation(
         expiresAt,
       },
     });
+
+    await recordAuditEvent(tx, {
+      orgId,
+      actorType: ActorType.USER,
+      actorId: creatorUserId,
+      action: 'INVITATION_CREATED',
+      entityType: 'INVITATION',
+      entityId: inv.id,
+      afterData: { role, email: email || null, expiresAt: expiresAt.toISOString() },
+    });
+
+    return inv;
   });
 }
 
@@ -396,6 +450,17 @@ export async function revokeInvitation(
         revokedAt: new Date(),
       },
     });
+
+    if (result.count > 0) {
+      await recordAuditEvent(tx, {
+        orgId,
+        actorType: ActorType.USER,
+        actorId: callerUserId,
+        action: 'INVITATION_REVOKED',
+        entityType: 'INVITATION',
+        entityId: invitationId,
+      });
+    }
 
     return result.count > 0;
   });

@@ -34,6 +34,24 @@ enum OutboxStatus {
   DEAD
 }
 
+enum ProposalKind {
+  PLAN
+  STATUS_CHANGE
+}
+
+enum ProposalState {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+enum AiReservationState {
+  RESERVED
+  SETTLED
+  RELEASED
+  AWAITING_RECONCILIATION
+}
+
 model User {
   id           String       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   githubUserId BigInt       @unique @map("github_user_id")
@@ -50,6 +68,11 @@ model User {
   createdDeps       TaskDependency[] @relation("DependencyCreator")
   createdInvitations Invitation[]   @relation("InvitationCreator")
   acceptedInvitations Invitation[]  @relation("InvitationAcceptor")
+  createdProposals    Proposal[]    @relation("ProposalCreator")
+  reviewedProposals   Proposal[]    @relation("ProposalReviewer")
+  createdReports      ProjectReport[] @relation("ReportCreator")
+  aiReservations      AiBudgetReservation[]
+  githubInstallations GithubInstallation[] @relation("GithubInstallationCreator")
 
   @@map("users")
 }
@@ -85,6 +108,11 @@ model Organization {
   auditEvents  AuditEvent[]
   outboxEvents OutboxEvent[]
   invitations  Invitation[]
+  proposals    Proposal[]
+  reports      ProjectReport[]
+  aiReservations AiBudgetReservation[]
+  githubInstallations GithubInstallation[]
+  githubRepositories  GithubRepository[]
 
   @@map("organizations")
 }
@@ -143,6 +171,9 @@ model Project {
   creator      User             @relation("ProjectCreator", fields: [createdBy], references: [id], onDelete: Restrict)
   tasks        Task[]
   dependencies TaskDependency[]
+  proposals    Proposal[]
+  reports      ProjectReport[]
+  githubRepositories GithubRepository[]
 
   @@unique([orgId, id])
   @@unique([orgId, key])
@@ -247,3 +278,135 @@ model OutboxEvent {
   @@map("outbox_events")
 }
 
+model Proposal {
+  id              String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  orgId           String        @map("org_id") @db.Uuid
+  projectId       String        @map("project_id") @db.Uuid
+  kind            ProposalKind  @default(PLAN)
+  state           ProposalState @default(PENDING)
+  title           String
+  description     String?
+  payload         Json
+  rejectionReason String?       @map("rejection_reason")
+  createdBy       String        @map("created_by") @db.Uuid
+  reviewedBy      String?       @map("reviewed_by") @db.Uuid
+  createdAt       DateTime      @default(now()) @map("created_at") @db.Timestamptz(6)
+  reviewedAt      DateTime?     @map("reviewed_at") @db.Timestamptz(6)
+
+  organization Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  project      Project      @relation(fields: [orgId, projectId], references: [orgId, id], onDelete: Cascade)
+  creator      User         @relation("ProposalCreator", fields: [createdBy], references: [id], onDelete: Restrict)
+  reviewer     User?        @relation("ProposalReviewer", fields: [reviewedBy], references: [id], onDelete: SetNull)
+
+  @@unique([orgId, id], map: "uq_proposals_org_id_id")
+  @@index([orgId])
+  @@index([orgId, projectId])
+  @@index([state])
+  @@map("proposals")
+}
+
+model ProjectReport {
+  id           String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  orgId        String   @map("org_id") @db.Uuid
+  projectId    String   @map("project_id") @db.Uuid
+  title        String
+  summary      String
+  deliveryRisk String   @default("LOW") @map("delivery_risk")
+  snapshotHash String   @map("snapshot_hash")
+  snapshot     Json
+  claims       Json
+  createdBy    String   @map("created_by") @db.Uuid
+  createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  organization Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  project      Project      @relation(fields: [orgId, projectId], references: [orgId, id], onDelete: Cascade)
+  creator      User         @relation("ReportCreator", fields: [createdBy], references: [id], onDelete: Restrict)
+
+  @@unique([orgId, id], map: "uq_project_reports_org_id_id")
+  @@index([orgId])
+  @@index([orgId, projectId])
+  @@index([createdAt(sort: Desc)])
+  @@map("project_reports")
+}
+
+model AiBudgetReservation {
+  id                  String             @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  orgId               String             @map("org_id") @db.Uuid
+  userId              String             @map("user_id") @db.Uuid
+  idempotencyKey      String             @map("idempotency_key")
+  reservedAmountCents Int                @map("reserved_amount_cents")
+  settledAmountCents  Int?               @map("settled_amount_cents")
+  state               AiReservationState @default(RESERVED)
+  modelId             String             @map("model_id")
+  periodKey           String             @map("period_key")
+  errorMessage        String?            @map("error_message")
+  createdAt           DateTime           @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt           DateTime           @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  organization Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  user         User         @relation(fields: [userId], references: [id], onDelete: Restrict)
+
+  @@unique([orgId, idempotencyKey], map: "uq_ai_reservations_org_idempotency")
+  @@unique([orgId, id], map: "uq_ai_reservations_org_id_id")
+  @@index([orgId, periodKey, state])
+  @@index([orgId, createdAt(sort: Desc)])
+  @@map("ai_budget_reservations")
+}
+
+model GithubInstallation {
+  id                  String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  orgId               String   @map("org_id") @db.Uuid
+  installationId      BigInt   @unique @map("installation_id")
+  accountLogin        String   @map("account_login")
+  accountId           BigInt   @map("account_id")
+  accountType         String   @default("Organization") @map("account_type")
+  repositorySelection String   @default("selected") @map("repository_selection")
+  createdBy           String   @map("created_by") @db.Uuid
+  createdAt           DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt           DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  organization Organization       @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  creator      User               @relation("GithubInstallationCreator", fields: [createdBy], references: [id], onDelete: Restrict)
+  repositories GithubRepository[]
+
+  @@unique([orgId, id], map: "uq_github_installations_org_id")
+  @@unique([orgId, installationId], map: "uq_github_installations_org_installation")
+  @@index([orgId])
+  @@map("github_installations")
+}
+
+model GithubRepository {
+  id             String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  orgId          String   @map("org_id") @db.Uuid
+  installationId BigInt   @map("installation_id")
+  projectId      String?  @map("project_id") @db.Uuid
+  repoId         BigInt   @map("repo_id")
+  repoName       String   @map("repo_name")
+  repoFullName   String   @map("repo_full_name")
+  isPrivate      Boolean  @default(true) @map("is_private")
+  createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  organization Organization       @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  installation GithubInstallation @relation(fields: [installationId], references: [installationId], onDelete: Cascade)
+  project      Project?           @relation(fields: [orgId, projectId], references: [orgId, id], onDelete: SetNull)
+
+  @@unique([orgId, id], map: "uq_github_repos_org_id")
+  @@unique([orgId, repoId], map: "uq_github_repos_org_repo")
+  @@index([orgId, projectId])
+  @@index([repoId])
+  @@map("github_repositories")
+}
+
+model GithubWebhookDelivery {
+  id          String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  deliveryId  String    @unique @map("delivery_id")
+  eventType   String    @map("event_type")
+  action      String?
+  payload     Json
+  status      String    @default("PENDING")
+  createdAt   DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  processedAt DateTime? @map("processed_at") @db.Timestamptz(6)
+
+  @@index([status, createdAt])
+  @@map("github_webhook_deliveries")
+}

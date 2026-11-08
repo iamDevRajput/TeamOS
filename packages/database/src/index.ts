@@ -47,8 +47,68 @@ export {
 } from "./tenancy";
 export type { CreateOrgResult } from "./tenancy";
 
+export { recordAuditEvent, listAuditEvents } from "./audit";
+export type { RecordAuditParams, ListAuditOptions } from "./audit";
+
+export {
+  createProject,
+  listProjects,
+  getProjectById,
+  updateProject,
+} from "./projects";
+
+export {
+  createTask,
+  listTasks,
+  listTasksWithDependencies,
+  getTaskById,
+  updateTask,
+  deleteTask,
+} from "./tasks";
+
+export {
+  addDependency,
+  removeDependency,
+  listProjectDependencies,
+} from "./dependencies";
+
+export {
+  createProposal,
+  listProjectProposals,
+  getProposalById,
+  rejectProposal,
+  approveProposal,
+} from "./proposals";
+
+export {
+  createProjectReport,
+  listProjectReports,
+  getReportById,
+} from "./reports";
+export type { CreateReportParams } from "./reports";
+
+export {
+  reserveAiBudget,
+  settleAiBudget,
+  releaseAiBudget,
+  markAiBudgetAwaitingReconciliation,
+  getOrganizationAiBudgetSummary,
+  getCurrentPeriodKey,
+} from "./ai-budget";
+export type { ReserveBudgetParams } from "./ai-budget";
+
+export {
+  saveGithubInstallation,
+  listGithubInstallations,
+  listGithubRepositories,
+  linkGithubRepositoryToProject,
+  saveWebhookDelivery,
+  cleanupExpiredWebhookDeliveries,
+} from "./github";
+export type { SaveInstallationParams } from "./github";
+
 // Re-export safe types and enums from Prisma Client
-export { TaskStatus, ActorType, OutboxStatus, OrgRole, Prisma } from "@prisma/client";
+export { TaskStatus, ActorType, OutboxStatus, OrgRole, ProposalKind, ProposalState, AiReservationState, Prisma } from "@prisma/client";
 
 export type {
   User,
@@ -56,9 +116,14 @@ export type {
   Organization,
   Membership,
   Invitation,
+  AuditEvent,
   Project,
   Task,
   TaskDependency,
-  AuditEvent,
+  Proposal,
   OutboxEvent,
+  AiBudgetReservation,
+  GithubInstallation,
+  GithubRepository,
+  GithubWebhookDelivery,
 } from "@prisma/client";

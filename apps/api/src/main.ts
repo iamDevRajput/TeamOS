@@ -5,7 +5,7 @@ import { AppModule } from './app.module';
 import { config } from './common/config';
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule);
+  const app = await NestFactory.create(AppModule, { rawBody: true });
 
   app.use(cookieParser());
   app.setGlobalPrefix('api/v1');

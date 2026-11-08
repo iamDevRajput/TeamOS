@@ -17,6 +17,7 @@
     "@nestjs/platform-express": "^10.4.7",
     "@teamos/contracts": "workspace:*",
     "@teamos/database": "workspace:*",
+    "@teamos/risk-engine": "workspace:*",
     "cookie-parser": "^1.4.7",
     "reflect-metadata": "^0.2.2",
     "rxjs": "^7.8.1"
